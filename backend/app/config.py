@@ -1,4 +1,12 @@
 import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Automatically discover and load .env from current or parent directories
+for candidate in [Path(".env"), Path("../.env"), Path(__file__).resolve().parent.parent / ".env", Path(__file__).resolve().parent.parent.parent / ".env"]:
+    if candidate.exists():
+        load_dotenv(candidate)
+        break
 
 class Settings:
     PROJECT_NAME: str = "AQUAINTEL - Smart Prawn Farm Automation"

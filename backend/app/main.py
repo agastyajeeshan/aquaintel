@@ -1,11 +1,15 @@
 import os
+from datetime import datetime, timezone
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from .config import settings
-from .database import engine, Base, SessionLocal
+from .database import engine, Base, SessionLocal, get_db
+from .models import Pond
 from .seed_data import seed_database
 
 # Import routers
@@ -83,10 +87,32 @@ def root():
         "docs_url": "/docs"
     }
 
+@app.get("/health")
 @app.get("/api/health")
-def health():
+def health(db: Session = Depends(get_db)):
+    db_status = "UNKNOWN"
+    ponds_count = 0
+    try:
+        db.execute(text("SELECT 1"))
+        ponds_count = db.query(Pond).count()
+        db_status = "CONNECTED"
+    except Exception as e:
+        db_status = f"ERROR: {str(e)}"
+
+    is_healthy = db_status == "CONNECTED"
     return {
-        "status": "HEALTHY",
+        "status": "HEALTHY" if is_healthy else "DEGRADED",
         "service": "AquaIntel Backend API",
-        "version": settings.VERSION
+        "version": settings.VERSION,
+        "database": {
+            "status": db_status,
+            "dialect": engine.dialect.name,
+            "ponds_seeded": ponds_count,
+        },
+        "system": {
+            "demo_mode": settings.DEMO_MODE,
+            "farm_total_hectares": settings.FARM_TOTAL_HECTARES,
+            "total_ponds": settings.TOTAL_PONDS,
+        },
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
