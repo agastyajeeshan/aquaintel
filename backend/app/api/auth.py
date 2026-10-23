@@ -1,32 +1,24 @@
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from jose import jwt
-import bcrypt
 
 from ..database import get_db
-from ..models import User
-from ..schemas import Token, UserLogin, UserRegister
-from ..config import settings
+from ..models import User, AuditLog
+from ..schemas import Token, UserLogin, UserRegister, PasswordResetRequest, PasswordResetConfirm
+from ..core.security import (
+    hash_password, verify_password, create_access_token,
+    create_password_reset_token, verify_password_reset_token,
+    get_current_user
+)
 
+logger = logging.getLogger("aquaintel.auth")
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-def verify_pw(plain: str, hashed: str) -> bool:
-    try:
-        return bcrypt.checkpw(plain.encode('utf-8'), hashed.encode('utf-8'))
-    except Exception:
-        return False
-
-def create_access_token(data: dict) -> str:
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 @router.post("/login", response_model=Token)
 def login(credentials: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == credentials.username).first()
-    if not user or not verify_pw(credentials.password, user.hashed_password):
+    if not user or not verify_password(credentials.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password"
@@ -38,6 +30,17 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
         "user_id": user.id
     })
     
+    # Log successful login
+    db.add(AuditLog(
+        user_id=user.id,
+        username=user.username,
+        action="USER_LOGIN",
+        resource_type="USER",
+        resource_id=str(user.id),
+        details={"role": user.role}
+    ))
+    db.commit()
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -54,8 +57,7 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Username or email already registered")
     
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(user_in.password.encode('utf-8'), salt).decode('utf-8')
+    hashed = hash_password(user_in.password)
     
     new_user = User(
         username=user_in.username,
@@ -74,6 +76,16 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         "user_id": new_user.id
     })
     
+    db.add(AuditLog(
+        user_id=new_user.id,
+        username=new_user.username,
+        action="USER_REGISTER",
+        resource_type="USER",
+        resource_id=str(new_user.id),
+        details={"role": new_user.role, "email": new_user.email}
+    ))
+    db.commit()
+
     return {
         "access_token": token,
         "token_type": "bearer",
@@ -82,16 +94,89 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         "full_name": new_user.full_name
     }
 
+@router.post("/logout")
+def logout(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
+        action="USER_LOGOUT",
+        resource_type="USER",
+        resource_id=str(current_user.id),
+        details={"username": current_user.username}
+    ))
+    db.commit()
+    return {"status": "SUCCESS", "message": "Successfully logged out"}
+
 @router.get("/me")
-def get_me(username: str = "admin", db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "email": current_user.email,
+        "role": current_user.role,
+        "full_name": current_user.full_name,
+        "phone": current_user.phone
+    }
+
+@router.post("/password-reset/request")
+def request_password_reset(req: PasswordResetRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == req.email).first()
+    # Always return success to avoid user enumeration
+    if not user:
+        return {
+            "status": "SENT",
+            "message": "If this email is registered, a password reset link has been dispatched."
+        }
+    
+    reset_token = create_password_reset_token(user.email)
+    
+    # Development mock email delivery
+    logger.info(
+        f"[MOCK_EMAIL] Password reset requested for {user.email}. "
+        f"Reset Token: {reset_token} (expires in 15 minutes)"
+    )
+
+    db.add(AuditLog(
+        user_id=user.id,
+        username=user.username,
+        action="PASSWORD_RESET_REQUESTED",
+        resource_type="USER",
+        resource_id=str(user.id),
+        details={"email": user.email}
+    ))
+    db.commit()
+
+    return {
+        "status": "SENT",
+        "message": "If this email is registered, a password reset link has been dispatched.",
+        "debug_token": reset_token  # Provided for local testing
+    }
+
+@router.post("/password-reset/confirm")
+def confirm_password_reset(req: PasswordResetConfirm, db: Session = Depends(get_db)):
+    email = verify_password_reset_token(req.token)
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired password reset token"
+        )
+    
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    user.hashed_password = hash_password(req.new_password)
+    db.add(AuditLog(
+        user_id=user.id,
+        username=user.username,
+        action="PASSWORD_RESET_COMPLETED",
+        resource_type="USER",
+        resource_id=str(user.id),
+        details={"email": user.email}
+    ))
+    db.commit()
+    
     return {
-        "id": user.id,
-        "username": user.username,
-        "email": user.email,
-        "role": user.role,
-        "full_name": user.full_name,
-        "phone": user.phone
+        "status": "SUCCESS",
+        "message": "Password successfully updated. You may now log in with your new credentials."
     }

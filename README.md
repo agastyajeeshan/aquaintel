@@ -1,11 +1,20 @@
 # AQUAINTEL
-### Smart Prawn Farm Automation & AI-Based Disease Risk Management
-*Designed for a 10-Hectare Commercial Penaeus vannamei Farm in Nellore, Andhra Pradesh, India*
+### AI-Powered Autonomous Prawn Farming and Disease Risk Management System
+**Tagline:** *Sense Smart. Predict Early. Farm Better.*  
+*Engineered for a 10-Hectare Commercial Penaeus vannamei Facility in Nellore, Andhra Pradesh, India*
 
 ---
 
-## 🌟 Executive Overview
-**AquaIntel** is an enterprise-grade commercial aquaculture automation and artificial intelligence platform engineered specifically for modern shrimp/prawn farming. Built for a **10-hectare commercial facility** (comprising 10 individual 1-hectare ponds), AquaIntel combines real-time IoT multi-probe telemetry, LoRa long-range wireless networks, smart biomass-driven feeding algorithms, multi-stage hysteresis aeration, and explainable AI disease risk forecasting to maximize survival rates, cut feed conversion ratio (FCR), and prevent catastrophic viral mortality outbreaks.
+## 🌟 Executive Overview & Core Principle
+
+**AquaIntel** is a complete, modular, and maintainable aquaculture engineering platform that monitors prawn farm conditions, supports intelligent feeding decisions, automates aeration according to water-quality conditions, identifies anomalies, estimates disease risk, and enables centralized management of multiple ponds.
+
+The system's core automation workflow is defined by:
+```
+SENSE ──► VALIDATE ──► ANALYZE ──► PREDICT ──► DECIDE ──► ACT ──► VERIFY
+```
+
+> **Target Deployment Distinction:** The 10-hectare commercial model (10 individual 1-hectare ponds) is the target use case and design reference, accompanied by a small college prototype and fully functional simulation environment for rapid testing and zero-hardware demonstration. Real and simulated data are strictly distinguished.
 
 ---
 
@@ -82,18 +91,41 @@ Click the **"ONLINE / OFFLINE"** button in the top navigation bar to simulate co
 - npm 9+
 
 ### 1. Start the Backend API Service
-```powershell
-cd "c:\Users\hp\OneDrive\Desktop\projects\automated prawn farm\backend"
+```bash
+cd backend
+python3 -m venv venv
+source venv/bin/activate  # Or venv\Scripts\activate on Windows
+pip install -r requirements.txt
 python run.py
 ```
 *The backend API will start on `http://localhost:8000`. Swagger API documentation is available at `http://localhost:8000/docs`.*
 
 ### 2. Start the Frontend Application
-```powershell
-cd "c:\Users\hp\OneDrive\Desktop\projects\automated prawn farm\frontend"
+```bash
+cd frontend
+npm install
 npm run dev
 ```
 *Open your browser and navigate to `http://localhost:5173` to access the full AquaIntel platform.*
+
+### 3. Containerized Deployment (Docker Compose)
+```bash
+docker compose up -d --build
+```
+
+---
+
+## 📚 Comprehensive Engineering Documentation
+
+Detailed architecture specifications and technical guides are available in the [`docs/`](file:///Users/jeeshan/Documents/projects/aquaintel/docs) directory:
+- [System Architecture](file:///Users/jeeshan/Documents/projects/aquaintel/docs/architecture.md): High-level topology, data workflows, and decoupled microservice boundaries.
+- [REST & WebSocket API Reference](file:///Users/jeeshan/Documents/projects/aquaintel/docs/api.md): Versioned `/api/v1` routes, auth, telemetry ingestion, and commands.
+- [Database Architecture](file:///Users/jeeshan/Documents/projects/aquaintel/docs/database.md): Entity relationship schemas, indexes, and Alembic migrations.
+- [AI & Machine Learning](file:///Users/jeeshan/Documents/projects/aquaintel/docs/ai-models.md): Anomaly detection, disease vulnerability scoring, and feature schemas.
+- [IoT & Edge Integration](file:///Users/jeeshan/Documents/projects/aquaintel/docs/iot-integration.md): LoRa 865.2 MHz RF parameters, MQTT schemas, and offline state machine.
+- [Automation Safety & Interlocks](file:///Users/jeeshan/Documents/projects/aquaintel/docs/safety.md): Priority hierarchy, anti-cycle motor hysteresis, and feeding cutoffs.
+- [Automated Testing](file:///Users/jeeshan/Documents/projects/aquaintel/docs/testing.md): Pytest backend suites and frontend type-checking.
+- [Deployment & Operations](file:///Users/jeeshan/Documents/projects/aquaintel/docs/deployment.md): Docker Compose, PostgreSQL setup, and production checklist.
 
 ---
 
@@ -104,3 +136,4 @@ npm run dev
 - **Viewer / Investor:** `viewer` / `viewer123` (Rajiv Menon — Aquaculture Analyst)
 
 *(Quick 1-click demo role switching is also available directly in the Settings and Login interfaces!)*
+

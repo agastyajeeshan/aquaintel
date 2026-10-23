@@ -28,6 +28,8 @@ from .api.roi import router as roi_router
 from .api.reports import router as reports_router
 from .api.settings import router as settings_router
 from .api.simulator import router as simulator_router, websocket_telemetry_endpoint
+from .api.telemetry import router as telemetry_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -56,23 +58,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount Routers under /api
-api_prefix = settings.API_V1_STR
-app.include_router(auth_router, prefix=api_prefix)
-app.include_router(farms_router, prefix=api_prefix)
-app.include_router(ponds_router, prefix=api_prefix)
-app.include_router(sensors_router, prefix=api_prefix)
-app.include_router(feeding_router, prefix=api_prefix)
-app.include_router(aeration_router, prefix=api_prefix)
-app.include_router(disease_router, prefix=api_prefix)
-app.include_router(cv_router, prefix=api_prefix)
-app.include_router(devices_router, prefix=api_prefix)
-app.include_router(alerts_router, prefix=api_prefix)
-app.include_router(analytics_router, prefix=api_prefix)
-app.include_router(roi_router, prefix=api_prefix)
-app.include_router(reports_router, prefix=api_prefix)
-app.include_router(settings_router, prefix=api_prefix)
-app.include_router(simulator_router, prefix=api_prefix)
+# Mount Routers under /api/v1 and /api for backwards compatibility
+api_routers = [
+    auth_router,
+    farms_router,
+    ponds_router,
+    sensors_router,
+    feeding_router,
+    aeration_router,
+    disease_router,
+    cv_router,
+    devices_router,
+    alerts_router,
+    analytics_router,
+    roi_router,
+    reports_router,
+    settings_router,
+    simulator_router,
+    telemetry_router
+]
+
+for r in api_routers:
+    app.include_router(r, prefix="/api/v1")
+    app.include_router(r, prefix="/api")
 
 # Direct WebSocket endpoint on root ws path as well
 app.add_api_websocket_route("/ws/telemetry", websocket_telemetry_endpoint)
@@ -84,11 +92,13 @@ def root():
         "description": "Smart Prawn Farm Automation & AI-Based Disease Risk Management",
         "farm_scale": "10 Hectare Commercial Farm (Nellore, AP, India)",
         "status": "OPERATIONAL",
-        "docs_url": "/docs"
+        "docs_url": "/docs",
+        "api_v1": "/api/v1"
     }
 
 @app.get("/health")
 @app.get("/api/health")
+@app.get("/api/v1/health")
 def health(db: Session = Depends(get_db)):
     db_status = "UNKNOWN"
     ponds_count = 0
@@ -116,3 +126,25 @@ def health(db: Session = Depends(get_db)):
         },
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
+
+@app.get("/ready")
+@app.get("/api/ready")
+@app.get("/api/v1/ready")
+def ready(db: Session = Depends(get_db)):
+    try:
+        db.execute(text("SELECT 1"))
+        return {"status": "READY", "database": "CONNECTED"}
+    except Exception as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail=f"Database not ready: {str(e)}")
+
+@app.get("/version")
+@app.get("/api/version")
+@app.get("/api/v1/version")
+def version():
+    return {
+        "project": settings.PROJECT_NAME,
+        "version": settings.VERSION,
+        "api_versions": ["v1", "legacy_api"]
+    }
+

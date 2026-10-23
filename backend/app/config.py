@@ -16,11 +16,10 @@ class Settings:
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
     
-    # Database: Defaults to local SQLite if DATABASE_URL is not set
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "sqlite:///./aquaintel.db"
-    )
+    # Database: Defaults to local SQLite anchored to project root
+    _raw_db = os.getenv("DATABASE_URL", "sqlite:///./aquaintel.db")
+    DATABASE_URL: str = f"sqlite:///{Path(__file__).resolve().parent.parent.parent / 'aquaintel.db'}" if "sqlite:///." in _raw_db else _raw_db
+
     
     # 10 Hectare Farm Specifications
     FARM_TOTAL_HECTARES: float = 10.0

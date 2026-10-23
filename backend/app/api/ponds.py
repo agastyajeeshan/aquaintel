@@ -2,14 +2,19 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Pond, Sensor, SensorReading, Feeder, Aerator, Alert, DiseasePrediction
+from ..models import Pond, Sensor, SensorReading, Feeder, Aerator, Alert, DiseasePrediction, AuditLog, Farm
+from ..schemas import PondCreateRequest, PondUpdateRequest
 from ..core.iot_simulator import iot_simulator
+from ..core.security import get_current_user, require_roles
 
 router = APIRouter(prefix="/ponds", tags=["Ponds"])
 
 @router.get("")
-def get_all_ponds(db: Session = Depends(get_db)):
-    ponds = db.query(Pond).order_by(Pond.pond_number).all()
+def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(get_db)):
+    query = db.query(Pond)
+    if not include_archived:
+        query = query.filter((Pond.is_archived == False) | (Pond.is_archived == None))
+    ponds = query.order_by(Pond.pond_number).all()
     result = []
     
     for p in ponds:
@@ -207,3 +212,132 @@ def get_pond_detail(
         "disease_predictions": disease_data,
         "alerts": alerts_data
     }
+
+@router.post("", status_code=201)
+def create_pond(req: PondCreateRequest, db: Session = Depends(get_db)):
+    existing = db.query(Pond).filter(Pond.pond_number == req.pond_number).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Pond with number {req.pond_number} already exists")
+
+    farm = db.query(Farm).first()
+    farm_id = farm.id if farm else 1
+
+    new_pond = Pond(
+        farm_id=farm_id,
+        pond_number=req.pond_number,
+        name=req.name,
+        area_ha=req.area_ha or 1.0,
+        water_volume_m3=req.water_volume_m3 or 12000.0,
+        shrimp_species=req.shrimp_species or "Litopenaeus vannamei",
+        current_age_days=req.current_age_days or 1,
+        post_larvae_count=req.post_larvae_count or 450000,
+        estimated_biomass_kg=req.estimated_biomass_kg or 100.0,
+        target_fcr=req.target_fcr or 1.25,
+        status="GREEN",
+        notes=req.notes,
+        is_archived=False
+    )
+    db.add(new_pond)
+    db.commit()
+    db.refresh(new_pond)
+
+    # Automatically provision standard sensor package
+    sensor_types = [
+        ("do", "Optical DO Probe", "mg/L", 4.0, 8.5, 5.0, 7.5, 6.5),
+        ("ph", "Industrial Glass pH Sensor", "pH", 7.5, 8.5, 7.8, 8.3, 8.0),
+        ("temperature", "PT100 RTD Submersible", "°C", 26.0, 33.0, 28.0, 31.0, 29.0),
+        ("salinity", "Toroidal Inductive Conductivity", "ppt", 10.0, 30.0, 16.0, 24.0, 20.0),
+        ("ammonia", "Ion Selective Electrode", "mg/L", 0.0, 0.1, 0.0, 0.05, 0.02),
+        ("turbidity", "Infrared Scatter Turbidity", "cm", 25.0, 45.0, 30.0, 40.0, 35.0),
+        ("water_level", "Ultrasonic Distance Sensor", "m", 1.0, 1.6, 1.2, 1.4, 1.3),
+    ]
+    for stype, model, unit, smin, smax, omin, omax, init_val in sensor_types:
+        db.add(Sensor(
+            pond_id=new_pond.id,
+            sensor_type=stype,
+            device_id=f"SENS-P{new_pond.pond_number:02d}-{stype.upper()}",
+            model=model,
+            unit=unit,
+            min_safe=smin,
+            max_safe=smax,
+            optimal_min=omin,
+            optimal_max=omax,
+            current_value=init_val,
+            status="ONLINE"
+        ))
+
+    # Add default aerator and feeder
+    db.add(Feeder(
+        pond_id=new_pond.id,
+        feeder_code=f"FEEDER-P{new_pond.pond_number:02d}",
+        name=f"Smart Solar Feeder {new_pond.pond_number:02d}",
+        hopper_capacity_kg=120.0,
+        current_feed_level_kg=90.0
+    ))
+    db.add(Aerator(
+        pond_id=new_pond.id,
+        aerator_code=f"AER-P{new_pond.pond_number:02d}-A",
+        name=f"Paddlewheel Aerator P{new_pond.pond_number:02d}",
+        power_rating_kw=1.5
+    ))
+
+    # Record Audit Log
+    db.add(AuditLog(
+        action="POND_CREATED",
+        resource_type="POND",
+        resource_id=str(new_pond.id),
+        details={"pond_number": new_pond.pond_number, "name": new_pond.name}
+    ))
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Pond '{new_pond.name}' created with standard sensors and actuators",
+        "pond_id": new_pond.id
+    }
+
+@router.patch("/{pond_id}")
+def update_pond(pond_id: int, req: PondUpdateRequest, db: Session = Depends(get_db)):
+    pond = db.query(Pond).filter(Pond.id == pond_id).first()
+    if not pond:
+        raise HTTPException(status_code=404, detail="Pond not found")
+
+    updated_fields = {}
+    for field, val in req.model_dump(exclude_unset=True).items():
+        setattr(pond, field, val)
+        updated_fields[field] = val
+
+    db.add(AuditLog(
+        action="POND_UPDATED",
+        resource_type="POND",
+        resource_id=str(pond.id),
+        details=updated_fields
+    ))
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Pond {pond_id} updated",
+        "updated_fields": updated_fields
+    }
+
+@router.delete("/{pond_id}")
+def archive_pond(pond_id: int, db: Session = Depends(get_db)):
+    pond = db.query(Pond).filter(Pond.id == pond_id).first()
+    if not pond:
+        raise HTTPException(status_code=404, detail="Pond not found")
+
+    pond.is_archived = True
+    db.add(AuditLog(
+        action="POND_ARCHIVED",
+        resource_type="POND",
+        resource_id=str(pond.id),
+        details={"pond_number": pond.pond_number, "name": pond.name}
+    ))
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": f"Pond {pond_id} archived successfully"
+    }
+

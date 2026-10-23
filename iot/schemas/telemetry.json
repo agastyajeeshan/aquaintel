@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AquaIntelTelemetryMessage",
+  "type": "object",
+  "required": ["schema_version", "message_id", "device_id", "timestamp", "mode", "readings"],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["1.0"] },
+    "message_id": { "type": "string" },
+    "device_id": { "type": "string" },
+    "farm_id": { "type": "string" },
+    "pond_id": { "type": "integer", "minimum": 1, "maximum": 50 },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "mode": { "type": "string", "enum": ["SIMULATED", "LIVE", "TEST"] },
+    "readings": {
+      "type": "object",
+      "properties": {
+        "do_mg_l": { "type": "number", "minimum": 0.0, "maximum": 25.0 },
+        "ph": { "type": "number", "minimum": 4.0, "maximum": 11.0 },
+        "temperature_c": { "type": "number", "minimum": 10.0, "maximum": 45.0 },
+        "salinity_ppt": { "type": "number", "minimum": 0.0, "maximum": 50.0 },
+        "ammonia_mg_l": { "type": "number", "minimum": 0.0, "maximum": 5.0 },
+        "turbidity_cm": { "type": "number", "minimum": 5.0, "maximum": 100.0 },
+        "water_level_m": { "type": "number", "minimum": 0.2, "maximum": 3.0 }
+      }
+    },
+    "sensor_status": {
+      "type": "object",
+      "properties": {
+        "do": { "type": "string", "enum": ["OK", "FAULT", "CALIBRATING", "STALE"] },
+        "ph": { "type": "string", "enum": ["OK", "FAULT", "CALIBRATING", "STALE"] },
+        "temperature": { "type": "string", "enum": ["OK", "FAULT", "CALIBRATING", "STALE"] },
+        "salinity": { "type": "string", "enum": ["OK", "FAULT", "CALIBRATING", "STALE"] },
+        "ammonia": { "type": "string", "enum": ["OK", "FAULT", "CALIBRATING", "STALE"] }
+      }
+    }
+  }
+}

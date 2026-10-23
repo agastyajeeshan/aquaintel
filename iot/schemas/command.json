@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AquaIntelActuatorCommandMessage",
+  "type": "object",
+  "required": ["schema_version", "command_id", "device_id", "action", "issued_at", "expires_at", "mode"],
+  "properties": {
+    "schema_version": { "type": "string", "enum": ["1.0"] },
+    "command_id": { "type": "string" },
+    "device_id": { "type": "string" },
+    "action": { "type": "string", "enum": ["SET_STATE", "DISPENSE", "SET_MODE", "CALIBRATE", "RESTART"] },
+    "target_state": { "type": "string", "enum": ["ON", "OFF"] },
+    "issued_at": { "type": "string", "format": "date-time" },
+    "expires_at": { "type": "string", "format": "date-time" },
+    "reason": { "type": "string" },
+    "mode": { "type": "string", "enum": ["AUTO", "MANUAL", "EMERGENCY"] }
+  }
+}

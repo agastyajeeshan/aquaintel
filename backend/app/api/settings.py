@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends, Body
+from datetime import datetime, timezone
+from typing import Optional, List
+from fastapi import APIRouter, Depends, Body, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import FarmSettings, User
+from ..models import FarmSettings, User, AuditLog, SensorReading, Alert
+from ..core.iot_simulator import iot_simulator
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
@@ -41,6 +44,13 @@ def update_farm_settings(payload: dict = Body(...), db: Session = Depends(get_db
         db.add(setting_record)
     else:
         setting_record.setting_value = payload
+
+    db.add(AuditLog(
+        action="SETTINGS_UPDATED",
+        resource_type="SETTINGS",
+        resource_id="thresholds",
+        details=payload
+    ))
     db.commit()
     return {"status": "SUCCESS", "settings": setting_record.setting_value}
 
@@ -56,3 +66,49 @@ def get_users_list(db: Session = Depends(get_db)):
         "phone": u.phone,
         "is_active": u.is_active
     } for u in users]
+
+@router.post("/reset-demo")
+def reset_demo_data(db: Session = Depends(get_db)):
+    """
+    Resets synthetic events and simulated telemetry states back to pristine diurnal state.
+    Preserves all user accounts, custom ponds, and configurations (Rule 19).
+    """
+    # 1. Clear simulator events
+    iot_simulator.reset_all_events()
+    iot_simulator.is_offline = False
+    iot_simulator.offline_queue_count = 0
+
+    # 2. Reset active simulated alerts to resolved
+    db.query(Alert).filter(Alert.status == "ACTIVE").update({
+        "status": "RESOLVED",
+        "resolved_at": datetime.now(timezone.utc),
+        "resolved_by": "SYSTEM (Demo Reset)"
+    })
+
+    # 3. Log audit event
+    db.add(AuditLog(
+        action="DEMO_DATA_RESET",
+        resource_type="SYSTEM",
+        resource_id="simulator",
+        details={"message": "All stress injections cleared; natural diurnal curves restored."}
+    ))
+    db.commit()
+
+    return {
+        "status": "SUCCESS",
+        "message": "Demo data reset complete. Normal sinusoidal diurnal cycle active."
+    }
+
+@router.get("/audit-logs")
+def get_audit_logs(limit: int = Query(50, le=200), db: Session = Depends(get_db)):
+    logs = db.query(AuditLog).order_by(AuditLog.timestamp.desc()).limit(limit).all()
+    return [{
+        "id": l.id,
+        "user_id": l.user_id,
+        "username": l.username,
+        "action": l.action,
+        "resource_type": l.resource_type,
+        "resource_id": l.resource_id,
+        "details": l.details,
+        "timestamp": l.timestamp.isoformat() if l.timestamp else None
+    } for l in logs]

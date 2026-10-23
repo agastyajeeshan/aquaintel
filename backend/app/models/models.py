@@ -55,6 +55,8 @@ class Pond(Base):
     grid_x = Column(Integer, default=0)
     grid_y = Column(Integer, default=0)
     
+    is_archived = Column(Boolean, default=False)
+    notes = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     farm = relationship("Farm", back_populates="ponds")
@@ -268,3 +270,47 @@ class FarmSettings(Base):
     setting_key = Column(String(100), unique=True, nullable=False)
     setting_value = Column(JSON, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow)
+
+class DeviceCommand(Base):
+    __tablename__ = "device_commands"
+
+    id = Column(Integer, primary_key=True, index=True)
+    command_id = Column(String(64), unique=True, index=True, nullable=False)
+    device_id = Column(String(50), nullable=False, index=True)
+    pond_id = Column(Integer, nullable=True)
+    action = Column(String(50), nullable=False)  # SET_STATE, DISPENSE, SET_MODE, CALIBRATE, RESTART
+    payload = Column(JSON, default=dict)
+    status = Column(String(30), default="PENDING")  # PENDING, SENT, ACKNOWLEDGED, COMPLETED, FAILED, EXPIRED
+    reason = Column(String(255), nullable=True)
+    mode = Column(String(30), default="AUTO")
+    issued_at = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at = Column(DateTime, nullable=True)
+    acknowledged_at = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    error_message = Column(String(255), nullable=True)
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, nullable=True)
+    username = Column(String(50), nullable=True)
+    action = Column(String(100), nullable=False, index=True)
+    resource_type = Column(String(50), nullable=False)
+    resource_id = Column(String(50), nullable=True)
+    details = Column(JSON, default=dict)
+    ip_address = Column(String(50), nullable=True)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+class IngestedTelemetry(Base):
+    __tablename__ = "ingested_telemetry"
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(String(64), unique=True, index=True, nullable=False)
+    device_id = Column(String(50), nullable=False, index=True)
+    farm_id = Column(String(50), nullable=True)
+    pond_id = Column(Integer, nullable=True, index=True)
+    mode = Column(String(30), default="SIMULATED")  # SIMULATED, LIVE, TEST
+    payload = Column(JSON, nullable=False)
+    received_at = Column(DateTime, default=datetime.utcnow, index=True)
+
