@@ -53,3 +53,12 @@ lerna-debug.log*
 *.sw?
 .DS_Store
 Thumbs.db
+
+# Dataset Archives & Sensitive Data
+*.zip
+*.tar.gz
+ai/data/disease/temp*/
+ai/data/disease/raw/real_farm_data_*.csv
+!ai/data/disease/raw/real_farm_data_template.csv
+ai/artifacts/*.joblib.bak
+

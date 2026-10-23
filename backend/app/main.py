@@ -29,6 +29,7 @@ from .api.reports import router as reports_router
 from .api.settings import router as settings_router
 from .api.simulator import router as simulator_router, websocket_telemetry_endpoint
 from .api.telemetry import router as telemetry_router
+from .api.ai import router as ai_router
 
 
 @asynccontextmanager
@@ -75,7 +76,8 @@ api_routers = [
     reports_router,
     settings_router,
     simulator_router,
-    telemetry_router
+    telemetry_router,
+    ai_router
 ]
 
 for r in api_routers:

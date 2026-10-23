@@ -50,6 +50,16 @@ export const api = {
   getDiseaseRisks: (pond_id?: number) =>
     fetchJson(`/disease/risks${pond_id ? `?pond_id=${pond_id}` : ""}`),
   
+  // AI & Dataset Intelligence
+  getAIModelStatus: () => fetchJson("/ai/models/status"),
+  getAIDataQualityReport: () => fetchJson("/ai/data/quality-report"),
+  validateAIDataset: () => fetchJson("/ai/data/validate", { method: "POST" }),
+  evaluateDiseaseRisk: (data: any) =>
+    fetchJson("/ai/disease-risk/evaluate", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  
   // Computer Vision
   getCVSamples: () => fetchJson("/cv/samples"),
   analyzeCV: async (formData?: FormData) => {

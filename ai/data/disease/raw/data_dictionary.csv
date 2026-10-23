@@ -1,0 +1,8 @@
+field,guidance
+disease_label,"For real training, use reliable, reviewed/confirmed labels."
+label_status,"Use CONFIRMED, SUSPECTED, RULED_OUT, UNRESOLVED, or SYNTHETIC_LABEL."
+tan_mg_l,Total ammonia nitrogen; not equivalent to unionized NH3.
+unionized_nh3_mg_l,Record measurement/calculation method and assumptions.
+feeding_response,"Standardize NORMAL, REDUCED, ABNORMAL, UNKNOWN definitions."
+mortality_count_24h,Count over previous 24 hours; include denominator/pond context when possible.
+timestamp_utc,ISO-8601 UTC timestamp; synchronize sensors and observations.

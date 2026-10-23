@@ -1,0 +1,67 @@
+{
+  "validation_timestamp": "2026-10-23T07:47:03.188956+00:00",
+  "zip_archive_path": "AquaIntel_Prawn_Disease_Dataset_Starter_Pack copy.zip",
+  "raw_file_inventory": [
+    "synthetic_class_counts.csv",
+    "disease_reference.csv",
+    "synthetic_demo_data_NOT_FOR_VALIDATED_TRAINING.csv",
+    "data_dictionary.csv",
+    "real_farm_data_template.csv"
+  ],
+  "validated_file": "synthetic_demo_data_NOT_FOR_VALIDATED_TRAINING.csv",
+  "total_rows_loaded": 1200,
+  "total_columns": 28,
+  "missing_columns": [],
+  "duplicate_records": 0,
+  "duplicate_rows": 0,
+  "missing_values_by_column": {
+    "do_mg_l": {
+      "missing_count": 149,
+      "missing_pct": 12.42
+    },
+    "ph": {
+      "missing_count": 84,
+      "missing_pct": 7.0
+    },
+    "lab_test_type": {
+      "missing_count": 1200,
+      "missing_pct": 100.0
+    },
+    "lab_test_date": {
+      "missing_count": 1200,
+      "missing_pct": 100.0
+    },
+    "lab_test_result": {
+      "missing_count": 1200,
+      "missing_pct": 100.0
+    },
+    "observer_id": {
+      "missing_count": 1200,
+      "missing_pct": 100.0
+    }
+  },
+  "physical_range_violations": {},
+  "provenance": {
+    "status": "100%_SYNTHETIC_DEMO_DATA",
+    "validation_status": "NOT_VALIDATED_FOR_REAL_WORLD_DISEASE_PREDICTION",
+    "synthetic_rows": 1200,
+    "real_rows": 0,
+    "confirmed_clinical_labels": 0,
+    "data_source_breakdown": {
+      "SYNTHETIC": 1200
+    },
+    "label_status_breakdown": {
+      "SYNTHETIC_LABEL": 1200
+    }
+  },
+  "class_distribution": {
+    "HEALTHY": 613,
+    "WSSV": 177,
+    "VIBRIOSIS": 122,
+    "AHPND_EMS": 121,
+    "BLACK_GILL": 74,
+    "MIXED_OR_UNRESOLVED": 50,
+    "EHP": 43
+  },
+  "critical_disclaimer": "CRITICAL: The validated dataset contains synthetic demo data. Under Section 5 of the Master Specification, models trained on this data are experimental and CANNOT be used as validated evidence for commercial farm decisions."
+}

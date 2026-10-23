@@ -1,0 +1,1 @@
+record_id,farm_id,pond_id,timestamp_utc,species,culture_day,temperature_c,do_mg_l,ph,salinity_ppt,tan_mg_l,unionized_nh3_mg_l,turbidity_ntu,water_level_m,estimated_biomass_kg,feed_kg_last_24h,feeding_response,mortality_count_24h,abnormal_behavior_observed,lab_test_type,lab_test_date,lab_test_result,disease_label,label_status,label_source,observer_id,data_source,notes
