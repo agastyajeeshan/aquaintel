@@ -124,4 +124,24 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ offline }),
     }),
+
+  // Dynamic Climate Adaptation & Forecasting
+  getWeatherCurrent: () => fetchJson("/climate/weather/current"),
+  getWeatherForecast: (horizons: number = 72) => fetchJson(`/climate/weather/forecast?horizons_hours=${horizons}`),
+  getClimateFleetAnalysis: () => fetchJson("/climate/analysis"),
+  getPondClimateAnalysis: (pondId: number) => fetchJson(`/climate/ponds/${pondId}/analysis`),
+  getPondMultiHorizonForecast: (pondId: number) => fetchJson(`/climate/ponds/${pondId}/forecast`),
+  getPondClimateRecommendations: (pondId: number) => fetchJson(`/climate/ponds/${pondId}/recommendations`),
+  approveClimateRecommendation: (pondId: number, action_type: string, notes?: string) =>
+    fetchJson(`/climate/ponds/${pondId}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ action_type, notes }),
+    }),
+  getClimateModelPerformance: () => fetchJson("/climate/models/performance"),
+  simulateClimateScenario: (scenario: string, custom_parameters?: any) =>
+    fetchJson("/climate/simulate", {
+      method: "POST",
+      body: JSON.stringify({ scenario, custom_parameters }),
+    }),
 };
+

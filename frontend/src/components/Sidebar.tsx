@@ -17,6 +17,7 @@ import {
   Wrench,
   FileText,
   Settings,
+  CloudSun,
 } from "lucide-react";
 
 interface NavItem {
@@ -30,6 +31,7 @@ const navItems: NavItem[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "ponds", label: "Ponds", icon: Grid3X3, badge: "10" },
   { id: "water-quality", label: "Water Quality", icon: Activity },
+  { id: "climate", label: "Climate Adaptation", icon: CloudSun, badge: "AI" },
   { id: "feeding", label: "Smart Feeding", icon: UtensilsCrossed },
   { id: "aeration", label: "Automated Aeration", icon: Wind },
   { id: "disease", label: "Disease Intelligence", icon: Microscope, badge: "AI" },
@@ -43,6 +45,7 @@ const navItems: NavItem[] = [
   { id: "reports", label: "Reports", icon: FileText },
   { id: "settings", label: "Settings", icon: Settings },
 ];
+
 
 export const Sidebar: React.FC = () => {
   const { activePage, setActivePage, activeAlertsCount } = useApp();

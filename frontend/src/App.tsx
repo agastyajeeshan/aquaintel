@@ -22,6 +22,7 @@ import { Maintenance } from "./pages/Maintenance";
 import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
 import { Auth } from "./pages/Auth";
+import { ClimateAdaptation } from "./pages/ClimateAdaptation";
 
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
@@ -38,6 +39,7 @@ const MainContent: React.FC = () => {
           {activePage === "ponds" && <Ponds />}
           {activePage === "pond-detail" && <PondDetail />}
           {activePage === "water-quality" && <WaterQuality />}
+          {activePage === "climate" && <ClimateAdaptation />}
           {activePage === "feeding" && <Feeding />}
           {activePage === "aeration" && <Aeration />}
           {activePage === "disease" && <DiseaseIntelligence />}
@@ -57,6 +59,7 @@ const MainContent: React.FC = () => {
     </div>
   );
 };
+
 
 export default function App() {
   return (

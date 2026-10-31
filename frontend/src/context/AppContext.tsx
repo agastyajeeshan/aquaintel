@@ -18,7 +18,9 @@ export type PageId =
   | "farm-mgmt"
   | "maintenance"
   | "reports"
-  | "settings";
+  | "settings"
+  | "climate";
+
 
 interface AppContextType {
   activePage: PageId;
