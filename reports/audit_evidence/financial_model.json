@@ -1,0 +1,43 @@
+{
+  "classification": "Illustrative Techno-Economic Projection (Unverified in Field)",
+  "capex_breakdown_inr": {
+    "optical_do_temp_probes": 450000,
+    "ph_electrode_assemblies": 120000,
+    "salinity_ec_sensors": 180000,
+    "solar_esp32_rtu_nodes": 140000,
+    "lorawan_gateway": 65000,
+    "automated_feeders": 520000,
+    "aerator_vfd_starters": 480000,
+    "edge_server_and_license": 145000,
+    "installation_and_calibration": 100000,
+    "total_initial_capex": 2200000
+  },
+  "base_case_assumptions": {
+    "farm_area_ha": 10.0,
+    "annual_crops": 2.5,
+    "yield_per_ha_crop_kg": 7500.0,
+    "annual_production_kg": 187500.0,
+    "shrimp_sale_price_inr_kg": 420.0,
+    "gross_revenue_inr": 78750000.0,
+    "traditional_fcr": 1.5,
+    "target_fcr": 1.25,
+    "feed_price_inr_kg": 88.0,
+    "projected_feed_savings_inr": 4125000.0,
+    "traditional_aerator_kwh_per_ha_yr": 18000.0,
+    "energy_savings_pct": 24.0,
+    "electricity_tariff_inr_kwh": 7.5,
+    "projected_energy_savings_inr": 324000.0,
+    "baseline_laborers": 12,
+    "monthly_wage_inr": 18000.0,
+    "labor_savings_pct": 30.0,
+    "projected_labor_savings_inr": 777600.0,
+    "traditional_disease_mortality_pct": 18.0,
+    "target_disease_mortality_pct": 4.5,
+    "projected_disease_reduction_pct": 13.5,
+    "projected_disease_protection_inr": 10631250.0,
+    "total_gross_projected_benefit_inr": 15857850.0,
+    "annual_opex_inr": 220000.0,
+    "net_annual_projected_benefit_inr": 15637850.0,
+    "projected_payback_months": 1.688
+  }
+}

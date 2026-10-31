@@ -1,0 +1,61 @@
+{
+  "file": "synthetic_demo_data_NOT_FOR_VALIDATED_TRAINING.csv",
+  "shape": [
+    1200,
+    28
+  ],
+  "columns": [
+    "record_id",
+    "farm_id",
+    "pond_id",
+    "timestamp_utc",
+    "species",
+    "culture_day",
+    "temperature_c",
+    "do_mg_l",
+    "ph",
+    "salinity_ppt",
+    "tan_mg_l",
+    "unionized_nh3_mg_l",
+    "turbidity_ntu",
+    "water_level_m",
+    "estimated_biomass_kg",
+    "feed_kg_last_24h",
+    "feeding_response",
+    "mortality_count_24h",
+    "abnormal_behavior_observed",
+    "lab_test_type",
+    "lab_test_date",
+    "lab_test_result",
+    "disease_label",
+    "label_status",
+    "label_source",
+    "observer_id",
+    "data_source",
+    "notes"
+  ],
+  "duplicates": 0,
+  "null_counts": {
+    "do_mg_l": 149,
+    "ph": 84,
+    "lab_test_type": 1200,
+    "lab_test_date": 1200,
+    "lab_test_result": 1200,
+    "observer_id": 1200
+  },
+  "data_source_counts": {
+    "SYNTHETIC": 1200
+  },
+  "label_status_counts": {
+    "SYNTHETIC_LABEL": 1200
+  },
+  "class_distribution": {
+    "HEALTHY": 613,
+    "WSSV": 177,
+    "VIBRIOSIS": 122,
+    "AHPND_EMS": 121,
+    "BLACK_GILL": 74,
+    "MIXED_OR_UNRESOLVED": 50,
+    "EHP": 43
+  }
+}

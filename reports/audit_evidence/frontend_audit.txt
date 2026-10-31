@@ -1,0 +1,1605 @@
+=== TYPESCRIPT & VITE BUILD ===
+
+> frontend@0.0.0 build
+> tsc -b && vite build
+
+vite v8.3.3 building client environment for production...
+transforming...
+✓ 2490 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.76 kB │ gzip:   0.47 kB
+dist/assets/index-DX1O3Xif.css   36.17 kB │ gzip:   6.71 kB
+dist/assets/index-BpkC7PNQ.js   813.79 kB │ gzip: 220.49 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 402ms
+
+=== OXLINT RESULTS ===
+
+> frontend@0.0.0 lint
+> oxlint
+
+
+  ! eslint(no-useless-catch): Unnecessary try/catch wrapper
+    ,-[src/services/api.ts:72:14]
+ 71 |       return await res.json();
+ 72 |     } catch (e) {
+    :              |
+    :              `-- is caught here
+ 73 |       throw e;
+    :       ^^^^|^^^
+    :           `-- and re-thrown here
+ 74 |     }
+    `----
+  help: Remove the try/catch wrapper, since it does not provide any additional error handling or functionality.
+
+  ! eslint(no-unused-vars): Identifier 'Mail' is imported but never used.
+   ,-[src/pages/Auth.tsx:7:3]
+ 6 |   User,
+ 7 |   Mail,
+   :   ^^|^
+   :     `-- 'Mail' is imported here
+ 8 |   ArrowRight,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ArrowRight' is imported but never used.
+   ,-[src/pages/Auth.tsx:8:3]
+ 7 |   Mail,
+ 8 |   ArrowRight,
+   :   ^^^^^|^^^^
+   :        `-- 'ArrowRight' is imported here
+ 9 |   ShieldCheck,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldCheck' is imported but never used.
+    ,-[src/pages/Auth.tsx:9:3]
+  8 |   ArrowRight,
+  9 |   ShieldCheck,
+    :   ^^^^^|^^^^^
+    :        `-- 'ShieldCheck' is imported here
+ 10 |   CheckCircle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'CheckCircle' is imported but never used.
+    ,-[src/pages/Auth.tsx:10:3]
+  9 |   ShieldCheck,
+ 10 |   CheckCircle,
+    :   ^^^^^|^^^^^
+    :        `-- 'CheckCircle' is imported here
+ 11 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'email' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Auth.tsx:18:10]
+ 17 |   const [password, setPassword] = useState<string>("admin123");
+ 18 |   const [email, setEmail] = useState<string>("");
+    :          ^^|^^
+    :            `-- 'email' is declared here
+ 19 |   const [msg, setMsg] = useState<string>("");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'setEmail' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Auth.tsx:18:17]
+ 17 |   const [password, setPassword] = useState<string>("admin123");
+ 18 |   const [email, setEmail] = useState<string>("");
+    :                 ^^^^|^^^
+    :                     `-- 'setEmail' is declared here
+ 19 |   const [msg, setMsg] = useState<string>("");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Identifier 'Layers' is imported but never used.
+   ,-[src/pages/FarmManagement.tsx:4:3]
+ 3 | import {
+ 4 |   Layers,
+   :   ^^^|^^
+   :      `-- 'Layers' is imported here
+ 5 |   Building,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Anchor' is imported but never used.
+   ,-[src/pages/FarmManagement.tsx:8:3]
+ 7 |   Users,
+ 8 |   Anchor,
+   :   ^^^|^^
+   :      `-- 'Anchor' is imported here
+ 9 |   Compass,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Compass' is imported but never used.
+    ,-[src/pages/FarmManagement.tsx:9:3]
+  8 |   Anchor,
+  9 |   Compass,
+    :   ^^^|^^^
+    :      `-- 'Compass' is imported here
+ 10 |   CheckCircle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'CheckCircle' is imported but never used.
+    ,-[src/pages/FarmManagement.tsx:10:3]
+  9 |   Compass,
+ 10 |   CheckCircle,
+    :   ^^^^^|^^^^^
+    :        `-- 'CheckCircle' is imported here
+ 11 |   Clock,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Clock' is imported but never used.
+    ,-[src/pages/FarmManagement.tsx:11:3]
+ 10 |   CheckCircle,
+ 11 |   Clock,
+    :   ^^|^^
+    :     `-- 'Clock' is imported here
+ 12 |   Sparkles,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Sparkles' is imported but never used.
+    ,-[src/pages/FarmManagement.tsx:12:3]
+ 11 |   Clock,
+ 12 |   Sparkles,
+    :   ^^^^|^^^
+    :       `-- 'Sparkles' is imported here
+ 13 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'UtensilsCrossed' is imported but never used.
+   ,-[src/pages/Feeding.tsx:5:3]
+ 4 | import {
+ 5 |   UtensilsCrossed,
+   :   ^^^^^^^|^^^^^^^
+   :          `-- 'UtensilsCrossed' is imported here
+ 6 |   ShieldAlert,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Play' is imported but never used.
+   ,-[src/pages/Feeding.tsx:7:3]
+ 6 |   ShieldAlert,
+ 7 |   Play,
+   :   ^^|^
+   :     `-- 'Play' is imported here
+ 8 |   Square,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Square' is imported but never used.
+   ,-[src/pages/Feeding.tsx:8:3]
+ 7 |   Play,
+ 8 |   Square,
+   :   ^^^|^^
+   :      `-- 'Square' is imported here
+ 9 |   Clock,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Clock' is imported but never used.
+    ,-[src/pages/Feeding.tsx:9:3]
+  8 |   Square,
+  9 |   Clock,
+    :   ^^|^^
+    :     `-- 'Clock' is imported here
+ 10 |   Sliders,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Sliders' is imported but never used.
+    ,-[src/pages/Feeding.tsx:10:3]
+  9 |   Clock,
+ 10 |   Sliders,
+    :   ^^^|^^^
+    :      `-- 'Sliders' is imported here
+ 11 |   TrendingDown,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'TrendingDown' is imported but never used.
+    ,-[src/pages/Feeding.tsx:11:3]
+ 10 |   Sliders,
+ 11 |   TrendingDown,
+    :   ^^^^^^|^^^^^
+    :         `-- 'TrendingDown' is imported here
+ 12 |   CheckCircle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertCircle' is imported but never used.
+    ,-[src/pages/Feeding.tsx:13:3]
+ 12 |   CheckCircle,
+ 13 |   AlertCircle,
+    :   ^^^^^|^^^^^
+    :        `-- 'AlertCircle' is imported here
+ 14 |   Zap,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Zap' is imported but never used.
+    ,-[src/pages/Feeding.tsx:14:3]
+ 13 |   AlertCircle,
+ 14 |   Zap,
+    :   ^|^
+    :    `-- 'Zap' is imported here
+ 15 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'ponds' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Feeding.tsx:18:11]
+ 17 | export const Feeding: React.FC = () => {
+ 18 |   const { ponds } = useApp();
+    :           ^^|^^
+    :             `-- 'ponds' is declared here
+ 19 |   const [feedingData, setFeedingData] = useState<any>(null);
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Feeding.tsx:20:10]
+ 19 |   const [feedingData, setFeedingData] = useState<any>(null);
+ 20 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 21 |   const [actionMsg, setActionMsg] = useState<string>("");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'recentLogs' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Feeding.tsx:60:9]
+ 59 |   const feeders = feedingData?.feeders || [];
+ 60 |   const recentLogs = feedingData?.recent_logs || [];
+    :         ^^^^^|^^^^
+    :              `-- 'recentLogs' is declared here
+ 61 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Feeding.tsx:36:5]
+ 34 | 
+ 35 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 36 |     loadData();
+    :     ^^^^|^^^
+    :         `-- Avoid calling setState() directly within an effect
+ 37 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Identifier 'useApp' is imported but never used.
+   ,-[src/pages/Aeration.tsx:2:10]
+ 1 | import React, { useState, useEffect } from "react";
+ 2 | import { useApp } from "../context/AppContext";
+   :          ^^^|^^
+   :             `-- 'useApp' is imported here
+ 3 | import { api } from "../services/api";
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Wind' is imported but never used.
+   ,-[src/pages/Aeration.tsx:5:3]
+ 4 | import {
+ 5 |   Wind,
+   :   ^^|^
+   :     `-- 'Wind' is imported here
+ 6 |   Zap,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Zap' is imported but never used.
+   ,-[src/pages/Aeration.tsx:6:3]
+ 5 |   Wind,
+ 6 |   Zap,
+   :   ^|^
+   :    `-- 'Zap' is imported here
+ 7 |   ShieldCheck,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertOctagon' is imported but never used.
+   ,-[src/pages/Aeration.tsx:8:3]
+ 7 |   ShieldCheck,
+ 8 |   AlertOctagon,
+   :   ^^^^^^|^^^^^
+   :         `-- 'AlertOctagon' is imported here
+ 9 |   Clock,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Clock' is imported but never used.
+    ,-[src/pages/Aeration.tsx:9:3]
+  8 |   AlertOctagon,
+  9 |   Clock,
+    :   ^^|^^
+    :     `-- 'Clock' is imported here
+ 10 |   Play,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Play' is imported but never used.
+    ,-[src/pages/Aeration.tsx:10:3]
+  9 |   Clock,
+ 10 |   Play,
+    :   ^^|^
+    :     `-- 'Play' is imported here
+ 11 |   Square,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Square' is imported but never used.
+    ,-[src/pages/Aeration.tsx:11:3]
+ 10 |   Play,
+ 11 |   Square,
+    :   ^^^|^^
+    :      `-- 'Square' is imported here
+ 12 |   AlertTriangle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+    ,-[src/pages/Aeration.tsx:12:3]
+ 11 |   Square,
+ 12 |   AlertTriangle,
+    :   ^^^^^^|^^^^^^
+    :         `-- 'AlertTriangle' is imported here
+ 13 |   RotateCcw,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'RotateCcw' is imported but never used.
+    ,-[src/pages/Aeration.tsx:13:3]
+ 12 |   AlertTriangle,
+ 13 |   RotateCcw,
+    :   ^^^^|^^^^
+    :       `-- 'RotateCcw' is imported here
+ 14 |   CheckCircle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Aeration.tsx:19:10]
+ 18 |   const [aerationData, setAerationData] = useState<any>(null);
+ 19 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 20 |   const [msg, setMsg] = useState<string>("");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'recentEvents' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Aeration.tsx:60:9]
+ 59 |   const aerators = aerationData?.aerators || [];
+ 60 |   const recentEvents = aerationData?.recent_events || [];
+    :         ^^^^^^|^^^^^
+    :               `-- 'recentEvents' is declared here
+ 61 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Aeration.tsx:36:5]
+ 34 | 
+ 35 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 36 |     loadData();
+    :     ^^^^|^^^
+    :         `-- Avoid calling setState() directly within an effect
+ 37 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Catch parameter 'err' is caught but never used.
+     ,-[src/context/AppContext.tsx:140:16]
+ 139 |         };
+ 140 |       } catch (err) {
+     :                ^|^
+     :                 `-- 'err' is declared here
+ 141 |         reconnectTimeout = setTimeout(connectWs, 4000);
+     `----
+  help: Consider handling this error.
+
+  ! react(only-export-components): Fast refresh only works when a file only exports components. Use a new file to share constants or functions between components.
+     ,-[src/context/AppContext.tsx:187:14]
+ 186 | 
+ 187 | export const useApp = () => {
+     :              ^^^^^^
+ 188 |   const context = useContext(AppContext);
+     `----
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/context/AppContext.tsx:85:5]
+ 83 | 
+ 84 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 85 |     refreshData();
+    :     ^^^^^|^^^^^
+    :          `-- Avoid calling setState() directly within an effect
+ 86 |     const interval = setInterval(refreshData, 5000);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Identifier 'LineChart' is imported but never used.
+   ,-[src/pages/Analytics.tsx:5:3]
+ 4 |   ResponsiveContainer,
+ 5 |   LineChart,
+   :   ^^^^|^^^^
+   :       `-- 'LineChart' is imported here
+ 6 |   Line,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Line' is imported but never used.
+   ,-[src/pages/Analytics.tsx:6:3]
+ 5 |   LineChart,
+ 6 |   Line,
+   :   ^^|^
+   :     `-- 'Line' is imported here
+ 7 |   BarChart,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'TrendingUp' is imported but never used.
+    ,-[src/pages/Analytics.tsx:16:3]
+ 15 | import {
+ 16 |   TrendingUp,
+    :   ^^^^^|^^^^
+    :        `-- 'TrendingUp' is imported here
+ 17 |   BarChart3,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'BarChart3' is imported but never used.
+    ,-[src/pages/Analytics.tsx:17:3]
+ 16 |   TrendingUp,
+ 17 |   BarChart3,
+    :   ^^^^|^^^^
+    :       `-- 'BarChart3' is imported here
+ 18 |   Zap,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Zap' is imported but never used.
+    ,-[src/pages/Analytics.tsx:18:3]
+ 17 |   BarChart3,
+ 18 |   Zap,
+    :   ^|^
+    :    `-- 'Zap' is imported here
+ 19 |   Activity,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Activity' is imported but never used.
+    ,-[src/pages/Analytics.tsx:19:3]
+ 18 |   Zap,
+ 19 |   Activity,
+    :   ^^^^|^^^
+    :       `-- 'Activity' is imported here
+ 20 |   Calendar,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Layers' is imported but never used.
+    ,-[src/pages/Analytics.tsx:21:3]
+ 20 |   Calendar,
+ 21 |   Layers,
+    :   ^^^|^^
+    :      `-- 'Layers' is imported here
+ 22 |   Award,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Award' is imported but never used.
+    ,-[src/pages/Analytics.tsx:22:3]
+ 21 |   Layers,
+ 22 |   Award,
+    :   ^^|^^
+    :     `-- 'Award' is imported here
+ 23 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Analytics.tsx:27:10]
+ 26 |   const [data, setData] = useState<any>(null);
+ 27 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 28 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Identifier 'CheckCircle' is imported but never used.
+   ,-[src/pages/ComputerVision.tsx:7:3]
+ 6 |   Info,
+ 7 |   CheckCircle,
+   :   ^^^^^|^^^^^
+   :        `-- 'CheckCircle' is imported here
+ 8 |   AlertTriangle,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+   ,-[src/pages/ComputerVision.tsx:8:3]
+ 7 |   CheckCircle,
+ 8 |   AlertTriangle,
+   :   ^^^^^^|^^^^^^
+   :         `-- 'AlertTriangle' is imported here
+ 9 |   Play,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Play' is imported but never used.
+    ,-[src/pages/ComputerVision.tsx:9:3]
+  8 |   AlertTriangle,
+  9 |   Play,
+    :   ^^|^
+    :     `-- 'Play' is imported here
+ 10 |   Eye,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Eye' is imported but never used.
+    ,-[src/pages/ComputerVision.tsx:10:3]
+  9 |   Play,
+ 10 |   Eye,
+    :   ^|^
+    :    `-- 'Eye' is imported here
+ 11 |   Crosshair,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Sparkles' is imported but never used.
+    ,-[src/pages/ComputerVision.tsx:12:3]
+ 11 |   Crosshair,
+ 12 |   Sparkles,
+    :   ^^^^|^^^
+    :       `-- 'Sparkles' is imported here
+ 13 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! react(immutability): Cannot access variable while it is being initialized
+    ,-[src/pages/ComputerVision.tsx:28:11]
+ 27 |         if (res && res.length > 0) {
+ 28 |           handleSelectSample(res[0]);
+    :           ^^^^^^^^^|^^^^^^^^
+    :                    `-- `handleSelectSample` is read during its own initialization
+ 29 |         }
+    `----
+  help: `handleSelectSample` is read while its declaration is still being initialized. Move the access after initialization. For a recursive callback, use a named function expression or restructure the callback so it does not capture itself during initialization
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/immutability
+
+  ! eslint(no-unused-vars): Identifier 'Auth' is imported but never used.
+    ,-[src/App.tsx:24:10]
+ 23 | import { Settings } from "./pages/Settings";
+ 24 | import { Auth } from "./pages/Auth";
+    :          ^^|^
+    :            `-- 'Auth' is imported here
+ 25 | 
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Filter' is imported but never used.
+   ,-[src/pages/Ponds.tsx:8:3]
+ 7 |   ArrowRight,
+ 8 |   Filter,
+   :   ^^^|^^
+   :      `-- 'Filter' is imported here
+ 9 |   CheckCircle2,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'CheckCircle2' is imported but never used.
+    ,-[src/pages/Ponds.tsx:9:3]
+  8 |   Filter,
+  9 |   CheckCircle2,
+    :   ^^^^^^|^^^^^
+    :         `-- 'CheckCircle2' is imported here
+ 10 |   AlertTriangle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+    ,-[src/pages/Ponds.tsx:10:3]
+  9 |   CheckCircle2,
+ 10 |   AlertTriangle,
+    :   ^^^^^^|^^^^^^
+    :         `-- 'AlertTriangle' is imported here
+ 11 |   AlertOctagon,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertOctagon' is imported but never used.
+    ,-[src/pages/Ponds.tsx:11:3]
+ 10 |   AlertTriangle,
+ 11 |   AlertOctagon,
+    :   ^^^^^^|^^^^^
+    :         `-- 'AlertOctagon' is imported here
+ 12 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'SettingsIcon' is imported but never used.
+   ,-[src/pages/Settings.tsx:5:15]
+ 4 | import {
+ 5 |   Settings as SettingsIcon,
+   :               ^^^^^^|^^^^^
+   :                     `-- 'SettingsIcon' is imported here
+ 6 |   ShieldCheck,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldCheck' is imported but never used.
+   ,-[src/pages/Settings.tsx:6:3]
+ 5 |   Settings as SettingsIcon,
+ 6 |   ShieldCheck,
+   :   ^^^^^|^^^^^
+   :        `-- 'ShieldCheck' is imported here
+ 7 |   Bell,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Bell' is imported but never used.
+   ,-[src/pages/Settings.tsx:7:3]
+ 6 |   ShieldCheck,
+ 7 |   Bell,
+   :   ^^|^
+   :     `-- 'Bell' is imported here
+ 8 |   Users,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Lock' is imported but never used.
+    ,-[src/pages/Settings.tsx:12:3]
+ 11 |   Save,
+ 12 |   Lock,
+    :   ^^|^
+    :     `-- 'Lock' is imported here
+ 13 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Settings.tsx:32:10]
+ 31 |   const [users, setUsers] = useState<any[]>([]);
+ 32 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 33 |   const [saveMsg, setSaveMsg] = useState<string>("");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Identifier 'Wrench' is imported but never used.
+   ,-[src/pages/Maintenance.tsx:3:3]
+ 2 | import {
+ 3 |   Wrench,
+   :   ^^^|^^
+   :      `-- 'Wrench' is imported here
+ 4 |   CheckCircle,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Clock' is imported but never used.
+   ,-[src/pages/Maintenance.tsx:5:3]
+ 4 |   CheckCircle,
+ 5 |   Clock,
+   :   ^^|^^
+   :     `-- 'Clock' is imported here
+ 6 |   AlertTriangle,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+   ,-[src/pages/Maintenance.tsx:6:3]
+ 5 |   Clock,
+ 6 |   AlertTriangle,
+   :   ^^^^^^|^^^^^^
+   :         `-- 'AlertTriangle' is imported here
+ 7 |   Plus,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Calendar' is imported but never used.
+   ,-[src/pages/Maintenance.tsx:8:3]
+ 7 |   Plus,
+ 8 |   Calendar,
+   :   ^^^^|^^^
+   :       `-- 'Calendar' is imported here
+ 9 |   Toolbox,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Toolbox' is imported but never used.
+    ,-[src/pages/Maintenance.tsx:9:3]
+  8 |   Calendar,
+  9 |   Toolbox,
+    :   ^^^|^^^
+    :      `-- 'Toolbox' is imported here
+ 10 |   DollarSign,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'DollarSign' is imported but never used.
+    ,-[src/pages/Maintenance.tsx:10:3]
+  9 |   Toolbox,
+ 10 |   DollarSign,
+    :   ^^^^^|^^^^
+    :        `-- 'DollarSign' is imported here
+ 11 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Activity' is imported but never used.
+   ,-[src/pages/WaterQuality.tsx:4:3]
+ 3 | import {
+ 4 |   Activity,
+   :   ^^^^|^^^
+   :       `-- 'Activity' is imported here
+ 5 |   Droplets,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Droplets' is imported but never used.
+   ,-[src/pages/WaterQuality.tsx:5:3]
+ 4 |   Activity,
+ 5 |   Droplets,
+   :   ^^^^|^^^
+   :       `-- 'Droplets' is imported here
+ 6 |   Thermometer,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Thermometer' is imported but never used.
+   ,-[src/pages/WaterQuality.tsx:6:3]
+ 5 |   Droplets,
+ 6 |   Thermometer,
+   :   ^^^^^|^^^^^
+   :        `-- 'Thermometer' is imported here
+ 7 |   ShieldCheck,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldCheck' is imported but never used.
+   ,-[src/pages/WaterQuality.tsx:7:3]
+ 6 |   Thermometer,
+ 7 |   ShieldCheck,
+   :   ^^^^^|^^^^^
+   :        `-- 'ShieldCheck' is imported here
+ 8 |   AlertTriangle,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+   ,-[src/pages/WaterQuality.tsx:8:3]
+ 7 |   ShieldCheck,
+ 8 |   AlertTriangle,
+   :   ^^^^^^|^^^^^^
+   :         `-- 'AlertTriangle' is imported here
+ 9 |   ArrowUpDown,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ArrowUpDown' is imported but never used.
+    ,-[src/pages/WaterQuality.tsx:9:3]
+  8 |   AlertTriangle,
+  9 |   ArrowUpDown,
+    :   ^^^^^|^^^^^
+    :        `-- 'ArrowUpDown' is imported here
+ 10 |   Download,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'selectedParam' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/WaterQuality.tsx:16:10]
+ 15 |   const { ponds, navigateToPondDetail } = useApp();
+ 16 |   const [selectedParam, setSelectedParam] = useState<string>("all");
+    :          ^^^^^^|^^^^^^
+    :                `-- 'selectedParam' is declared here
+ 17 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'setSelectedParam' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/WaterQuality.tsx:16:25]
+ 15 |   const { ponds, navigateToPondDetail } = useApp();
+ 16 |   const [selectedParam, setSelectedParam] = useState<string>("all");
+    :                         ^^^^^^^^|^^^^^^^
+    :                                 `-- 'setSelectedParam' is declared here
+ 17 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Identifier 'Radio' is imported but never used.
+   ,-[src/pages/IoTDevices.tsx:4:3]
+ 3 | import {
+ 4 |   Radio,
+   :   ^^|^^
+   :     `-- 'Radio' is imported here
+ 5 |   Wifi,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Wifi' is imported but never used.
+   ,-[src/pages/IoTDevices.tsx:5:3]
+ 4 |   Radio,
+ 5 |   Wifi,
+   :   ^^|^
+   :     `-- 'Wifi' is imported here
+ 6 |   Battery,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Battery' is imported but never used.
+   ,-[src/pages/IoTDevices.tsx:6:3]
+ 5 |   Wifi,
+ 6 |   Battery,
+   :   ^^^|^^^
+   :      `-- 'Battery' is imported here
+ 7 |   BatteryCharging,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'BatteryCharging' is imported but never used.
+   ,-[src/pages/IoTDevices.tsx:7:3]
+ 6 |   Battery,
+ 7 |   BatteryCharging,
+   :   ^^^^^^^|^^^^^^^
+   :          `-- 'BatteryCharging' is imported here
+ 8 |   Cpu,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Cpu' is imported but never used.
+   ,-[src/pages/IoTDevices.tsx:8:3]
+ 7 |   BatteryCharging,
+ 8 |   Cpu,
+   :   ^|^
+   :    `-- 'Cpu' is imported here
+ 9 |   Plus,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'RefreshCw' is imported but never used.
+    ,-[src/pages/IoTDevices.tsx:10:3]
+  9 |   Plus,
+ 10 |   RefreshCw,
+    :   ^^^^|^^^^
+    :       `-- 'RefreshCw' is imported here
+ 11 |   CheckCircle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+    ,-[src/pages/IoTDevices.tsx:12:3]
+ 11 |   CheckCircle,
+ 12 |   AlertTriangle,
+    :   ^^^^^^|^^^^^^
+    :         `-- 'AlertTriangle' is imported here
+ 13 |   RadioTower,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'RadioTower' is imported but never used.
+    ,-[src/pages/IoTDevices.tsx:13:3]
+ 12 |   AlertTriangle,
+ 13 |   RadioTower,
+    :   ^^^^^|^^^^
+    :        `-- 'RadioTower' is imported here
+ 14 |   Server,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Server' is imported but never used.
+    ,-[src/pages/IoTDevices.tsx:14:3]
+ 13 |   RadioTower,
+ 14 |   Server,
+    :   ^^^|^^
+    :      `-- 'Server' is imported here
+ 15 |   ArrowRight,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ArrowRight' is imported but never used.
+    ,-[src/pages/IoTDevices.tsx:15:3]
+ 14 |   Server,
+ 15 |   ArrowRight,
+    :   ^^^^^|^^^^
+    :        `-- 'ArrowRight' is imported here
+ 16 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/IoTDevices.tsx:20:10]
+ 19 |   const [deviceData, setDeviceData] = useState<any>(null);
+ 20 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 21 |   const [showAddModal, setShowAddModal] = useState<boolean>(false);
+    `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/IoTDevices.tsx:40:5]
+ 38 | 
+ 39 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 40 |     loadDevices();
+    :     ^^^^^|^^^^^
+    :          `-- Avoid calling setState() directly within an effect
+ 41 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! eslint(no-unused-vars): Identifier 'Microscope' is imported but never used.
+    ,-[src/pages/PondDetail.tsx:18:3]
+ 17 |   UtensilsCrossed,
+ 18 |   Microscope,
+    :   ^^^^^|^^^^
+    :        `-- 'Microscope' is imported here
+ 19 |   AlertTriangle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+    ,-[src/pages/PondDetail.tsx:19:3]
+ 18 |   Microscope,
+ 19 |   AlertTriangle,
+    :   ^^^^^^|^^^^^^
+    :         `-- 'AlertTriangle' is imported here
+ 20 |   Play,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Sliders' is imported but never used.
+    ,-[src/pages/PondDetail.tsx:23:3]
+ 22 |   Clock,
+ 23 |   Sliders,
+    :   ^^^|^^^
+    :      `-- 'Sliders' is imported here
+ 24 |   ShieldAlert,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldAlert' is imported but never used.
+    ,-[src/pages/PondDetail.tsx:24:3]
+ 23 |   Sliders,
+ 24 |   ShieldAlert,
+    :   ^^^^^|^^^^^
+    :        `-- 'ShieldAlert' is imported here
+ 25 |   Droplets,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Droplets' is imported but never used.
+    ,-[src/pages/PondDetail.tsx:25:3]
+ 24 |   ShieldAlert,
+ 25 |   Droplets,
+    :   ^^^^|^^^
+    :       `-- 'Droplets' is imported here
+ 26 |   Calendar,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Calendar' is imported but never used.
+    ,-[src/pages/PondDetail.tsx:26:3]
+ 25 |   Droplets,
+ 26 |   Calendar,
+    :   ^^^^|^^^
+    :       `-- 'Calendar' is imported here
+ 27 |   CheckCircle,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'isOffline' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/PondDetail.tsx:31:42]
+ 30 | export const PondDetail: React.FC = () => {
+ 31 |   const { selectedPondId, setActivePage, isOffline } = useApp();
+    :                                          ^^^^|^^^^
+    :                                              `-- 'isOffline' is declared here
+ 32 |   const [data, setData] = useState<any>(null);
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'activeTab' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/PondDetail.tsx:35:10]
+ 34 |   const [timeRange, setTimeRange] = useState<string>("24h");
+ 35 |   const [activeTab, setActiveTab] = useState<string>("charts");
+    :          ^^^^|^^^^
+    :              `-- 'activeTab' is declared here
+ 36 |   const [actuatorMsg, setActuatorMsg] = useState<string>("");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'setActiveTab' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/PondDetail.tsx:35:21]
+ 34 |   const [timeRange, setTimeRange] = useState<string>("24h");
+ 35 |   const [activeTab, setActiveTab] = useState<string>("charts");
+    :                     ^^^^^^|^^^^^
+    :                           `-- 'setActiveTab' is declared here
+ 36 |   const [actuatorMsg, setActuatorMsg] = useState<string>("");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'metrics' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/PondDetail.tsx:85:9]
+ 84 |   const overview = data?.overview || {};
+ 85 |   const metrics = data?.live_metrics || {};
+    :         ^^^|^^^
+    :            `-- 'metrics' is declared here
+ 86 |   const chartSeries = data?.chart_series || [];
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'disease' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/PondDetail.tsx:89:9]
+ 88 |   const feeder = data?.feeder;
+ 89 |   const disease = data?.disease_predictions || [];
+    :         ^^^|^^^
+    :            `-- 'disease' is declared here
+ 90 |   const alerts = data?.alerts || [];
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'alerts' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/PondDetail.tsx:90:9]
+ 89 |   const disease = data?.disease_predictions || [];
+ 90 |   const alerts = data?.alerts || [];
+    :         ^^^|^^
+    :            `-- 'alerts' is declared here
+ 91 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/PondDetail.tsx:51:5]
+ 49 | 
+ 50 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 51 |     loadPondData();
+    :     ^^^^^^|^^^^^
+    :           `-- Avoid calling setState() directly within an effect
+ 52 |   }, [selectedPondId, timeRange]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'loadPondData'
+    ,-[src/pages/PondDetail.tsx:52:6]
+ 50 |   useEffect(() => {
+ 51 |     loadPondData();
+    :     ^^^^^^|^^^^^
+    :           `-- useEffect uses `loadPondData` here
+ 52 |   }, [selectedPondId, timeRange]);
+    :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 53 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Identifier 'PlayCircle' is imported but never used.
+    ,-[src/components/Navbar.tsx:9:3]
+  8 |   Bell,
+  9 |   PlayCircle,
+    :   ^^^^^|^^^^
+    :        `-- 'PlayCircle' is imported here
+ 10 |   ShieldCheck,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldCheck' is imported but never used.
+    ,-[src/components/Navbar.tsx:10:3]
+  9 |   PlayCircle,
+ 10 |   ShieldCheck,
+    :   ^^^^^|^^^^^
+    :        `-- 'ShieldCheck' is imported here
+ 11 |   RefreshCw,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'RefreshCw' is imported but never used.
+    ,-[src/components/Navbar.tsx:11:3]
+ 10 |   ShieldCheck,
+ 11 |   RefreshCw,
+    :   ^^^^|^^^^
+    :       `-- 'RefreshCw' is imported here
+ 12 |   SlidersHorizontal,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'FileText' is imported but never used.
+   ,-[src/pages/Reports.tsx:4:3]
+ 3 | import {
+ 4 |   FileText,
+   :   ^^^^|^^^
+   :       `-- 'FileText' is imported here
+ 5 |   Download,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Calendar' is imported but never used.
+   ,-[src/pages/Reports.tsx:7:3]
+ 6 |   Printer,
+ 7 |   Calendar,
+   :   ^^^^|^^^
+   :       `-- 'Calendar' is imported here
+ 8 |   CheckCircle,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'CheckCircle' is imported but never used.
+   ,-[src/pages/Reports.tsx:8:3]
+ 7 |   Calendar,
+ 8 |   CheckCircle,
+   :   ^^^^^|^^^^^
+   :        `-- 'CheckCircle' is imported here
+ 9 |   FileSpreadsheet,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'FileSpreadsheet' is imported but never used.
+    ,-[src/pages/Reports.tsx:9:3]
+  8 |   CheckCircle,
+  9 |   FileSpreadsheet,
+    :   ^^^^^^^|^^^^^^^
+    :          `-- 'FileSpreadsheet' is imported here
+ 10 |   Layers,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Layers' is imported but never used.
+    ,-[src/pages/Reports.tsx:10:3]
+  9 |   FileSpreadsheet,
+ 10 |   Layers,
+    :   ^^^|^^
+    :      `-- 'Layers' is imported here
+ 11 |   ArrowRight,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ArrowRight' is imported but never used.
+    ,-[src/pages/Reports.tsx:11:3]
+ 10 |   Layers,
+ 11 |   ArrowRight,
+    :   ^^^^^|^^^^
+    :        `-- 'ArrowRight' is imported here
+ 12 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/Reports.tsx:16:10]
+ 15 |   const [reportData, setReportData] = useState<any>(null);
+ 16 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 17 |   const [activeReportType, setActiveReportType] = useState<string>("daily");
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+   ,-[src/pages/Alerts.tsx:4:3]
+ 3 | import {
+ 4 |   AlertTriangle,
+   :   ^^^^^^|^^^^^^
+   :         `-- 'AlertTriangle' is imported here
+ 5 |   AlertOctagon,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertOctagon' is imported but never used.
+   ,-[src/pages/Alerts.tsx:5:3]
+ 4 |   AlertTriangle,
+ 5 |   AlertOctagon,
+   :   ^^^^^^|^^^^^
+   :         `-- 'AlertOctagon' is imported here
+ 6 |   Info,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Info' is imported but never used.
+   ,-[src/pages/Alerts.tsx:6:3]
+ 5 |   AlertOctagon,
+ 6 |   Info,
+   :   ^^|^
+   :     `-- 'Info' is imported here
+ 7 |   CheckCircle,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'EyeOff' is imported but never used.
+   ,-[src/pages/Alerts.tsx:8:3]
+ 7 |   CheckCircle,
+ 8 |   EyeOff,
+   :   ^^^|^^
+   :      `-- 'EyeOff' is imported here
+ 9 |   BellRing,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Filter' is imported but never used.
+    ,-[src/pages/Alerts.tsx:10:3]
+  9 |   BellRing,
+ 10 |   Filter,
+    :   ^^^|^^
+    :      `-- 'Filter' is imported here
+ 11 |   MessageSquare,
+    `----
+  help: Consider removing this import.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/Alerts.tsx:39:5]
+ 37 | 
+ 38 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 39 |     loadAlerts();
+    :     ^^^^^|^^^^
+    :          `-- Avoid calling setState() directly within an effect
+ 40 |   }, [severityFilter, statusFilter]);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'loadAlerts'
+    ,-[src/pages/Alerts.tsx:40:6]
+ 38 |   useEffect(() => {
+ 39 |     loadAlerts();
+    :     ^^^^^|^^^^
+    :          `-- useEffect uses `loadAlerts` here
+ 40 |   }, [severityFilter, statusFilter]);
+    :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 41 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Identifier 'Waves' is imported but never used.
+   ,-[src/pages/Dashboard.tsx:4:3]
+ 3 | import {
+ 4 |   Waves,
+   :   ^^|^^
+   :     `-- 'Waves' is imported here
+ 5 |   HeartPulse,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Flame' is imported but never used.
+   ,-[src/pages/Dashboard.tsx:7:3]
+ 6 |   AlertTriangle,
+ 7 |   Flame,
+   :   ^^|^^
+   :     `-- 'Flame' is imported here
+ 8 |   Zap,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Zap' is imported but never used.
+   ,-[src/pages/Dashboard.tsx:8:3]
+ 7 |   Flame,
+ 8 |   Zap,
+   :   ^|^
+   :    `-- 'Zap' is imported here
+ 9 |   TrendingUp,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'TrendingUp' is imported but never used.
+    ,-[src/pages/Dashboard.tsx:9:3]
+  8 |   Zap,
+  9 |   TrendingUp,
+    :   ^^^^^|^^^^
+    :        `-- 'TrendingUp' is imported here
+ 10 |   Radio,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldAlert' is imported but never used.
+    ,-[src/pages/Dashboard.tsx:12:3]
+ 11 |   ArrowRight,
+ 12 |   ShieldAlert,
+    :   ^^^^^|^^^^^
+    :        `-- 'ShieldAlert' is imported here
+ 13 |   Droplets,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Droplets' is imported but never used.
+    ,-[src/pages/Dashboard.tsx:13:3]
+ 12 |   ShieldAlert,
+ 13 |   Droplets,
+    :   ^^^^|^^^
+    :       `-- 'Droplets' is imported here
+ 14 |   Wind,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'TrendingUp' is imported but never used.
+   ,-[src/pages/ROIBusiness.tsx:4:3]
+ 3 | import {
+ 4 |   TrendingUp,
+   :   ^^^^^|^^^^
+   :        `-- 'TrendingUp' is imported here
+ 5 |   CircleDollarSign,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'CircleDollarSign' is imported but never used.
+   ,-[src/pages/ROIBusiness.tsx:5:3]
+ 4 |   TrendingUp,
+ 5 |   CircleDollarSign,
+   :   ^^^^^^^^|^^^^^^^
+   :           `-- 'CircleDollarSign' is imported here
+ 6 |   PieChart,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'PieChart' is imported but never used.
+   ,-[src/pages/ROIBusiness.tsx:6:3]
+ 5 |   CircleDollarSign,
+ 6 |   PieChart,
+   :   ^^^^|^^^
+   :       `-- 'PieChart' is imported here
+ 7 |   Calculator,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ArrowRight' is imported but never used.
+   ,-[src/pages/ROIBusiness.tsx:8:3]
+ 7 |   Calculator,
+ 8 |   ArrowRight,
+   :   ^^^^^|^^^^
+   :        `-- 'ArrowRight' is imported here
+ 9 |   Info,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'CheckCircle' is imported but never used.
+    ,-[src/pages/ROIBusiness.tsx:10:3]
+  9 |   Info,
+ 10 |   CheckCircle,
+    :   ^^^^^|^^^^^
+    :        `-- 'CheckCircle' is imported here
+ 11 |   ShieldCheck,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldCheck' is imported but never used.
+    ,-[src/pages/ROIBusiness.tsx:11:3]
+ 10 |   CheckCircle,
+ 11 |   ShieldCheck,
+    :   ^^^^^|^^^^^
+    :        `-- 'ShieldCheck' is imported here
+ 12 |   Zap,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/ROIBusiness.tsx:21:10]
+ 20 |   const [data, setData] = useState<any>(null);
+ 21 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 22 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! eslint(no-unused-vars): Variable 'setFarmArea' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/ROIBusiness.tsx:24:20]
+ 23 |   // Custom inputs for interactive scenario calculator
+ 24 |   const [farmArea, setFarmArea] = useState<number>(10.0);
+    :                    ^^^^^|^^^^^
+    :                         `-- 'setFarmArea' is declared here
+ 25 |   const [annualCrops, setAnnualCrops] = useState<number>(2.5);
+    `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/ROIBusiness.tsx:48:5]
+ 46 | 
+ 47 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 48 |     loadScenarios();
+    :     ^^^^^^|^^^^^^
+    :           `-- Avoid calling setState() directly within an effect
+ 49 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'loadScenarios'
+    ,-[src/pages/ROIBusiness.tsx:49:6]
+ 47 |   useEffect(() => {
+ 48 |     loadScenarios();
+    :     ^^^^^^|^^^^^^
+    :           `-- useEffect uses `loadScenarios` here
+ 49 |   }, []);
+    :      ^^
+ 50 | 
+    `----
+  help: Either include it or remove the dependency array.
+
+  ! eslint(no-unused-vars): Identifier 'Microscope' is imported but never used.
+   ,-[src/pages/DiseaseIntelligence.tsx:5:3]
+ 4 | import {
+ 5 |   Microscope,
+   :   ^^^^^|^^^^
+   :        `-- 'Microscope' is imported here
+ 6 |   ShieldAlert,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ShieldAlert' is imported but never used.
+   ,-[src/pages/DiseaseIntelligence.tsx:6:3]
+ 5 |   Microscope,
+ 6 |   ShieldAlert,
+   :   ^^^^^|^^^^^
+   :        `-- 'ShieldAlert' is imported here
+ 7 |   AlertTriangle,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'AlertTriangle' is imported but never used.
+   ,-[src/pages/DiseaseIntelligence.tsx:7:3]
+ 6 |   ShieldAlert,
+ 7 |   AlertTriangle,
+   :   ^^^^^^|^^^^^^
+   :         `-- 'AlertTriangle' is imported here
+ 8 |   Info,
+   `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'TrendingUp' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:10:3]
+  9 |   CheckCircle,
+ 10 |   TrendingUp,
+    :   ^^^^^|^^^^
+    :        `-- 'TrendingUp' is imported here
+ 11 |   Sliders,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Sliders' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:11:3]
+ 10 |   TrendingUp,
+ 11 |   Sliders,
+    :   ^^^|^^^
+    :      `-- 'Sliders' is imported here
+ 12 |   ChevronRight,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'ChevronRight' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:12:3]
+ 11 |   Sliders,
+ 12 |   ChevronRight,
+    :   ^^^^^^|^^^^^
+    :         `-- 'ChevronRight' is imported here
+ 13 |   Flame,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Flame' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:13:3]
+ 12 |   ChevronRight,
+ 13 |   Flame,
+    :   ^^|^^
+    :     `-- 'Flame' is imported here
+ 14 |   Droplets,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Droplets' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:14:3]
+ 13 |   Flame,
+ 14 |   Droplets,
+    :   ^^^^|^^^
+    :       `-- 'Droplets' is imported here
+ 15 |   Database,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'FileCheck' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:16:3]
+ 15 |   Database,
+ 16 |   FileCheck,
+    :   ^^^^|^^^^
+    :       `-- 'FileCheck' is imported here
+ 17 |   RefreshCw,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'Activity' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:18:3]
+ 17 |   RefreshCw,
+ 18 |   Activity,
+    :   ^^^^|^^^
+    :       `-- 'Activity' is imported here
+ 19 |   FileSpreadsheet,
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Identifier 'FileSpreadsheet' is imported but never used.
+    ,-[src/pages/DiseaseIntelligence.tsx:19:3]
+ 18 |   Activity,
+ 19 |   FileSpreadsheet,
+    :   ^^^^^^^|^^^^^^^
+    :          `-- 'FileSpreadsheet' is imported here
+ 20 | } from "lucide-react";
+    `----
+  help: Consider removing this import.
+
+  ! eslint(no-unused-vars): Variable 'loading' is declared but never used. Unused variables should start with a '_'.
+    ,-[src/pages/DiseaseIntelligence.tsx:26:10]
+ 25 |   const [selectedPondId, setSelectedPondId] = useState<number>(8); // Pond 8 has elevated risk for demo
+ 26 |   const [loading, setLoading] = useState<boolean>(true);
+    :          ^^^|^^^
+    :             `-- 'loading' is declared here
+ 27 | 
+    `----
+  help: Consider removing this declaration.
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+    ,-[src/pages/DiseaseIntelligence.tsx:62:5]
+ 60 | 
+ 61 |   useEffect(() => {
+    :   ^^^^|^^^^
+    :       `-- This is the containing effect
+ 62 |     loadAllData();
+    :     ^^^^^|^^^^^
+    :          `-- Avoid calling setState() directly within an effect
+ 63 |   }, []);
+    `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react(set-state-in-effect): Calling setState synchronously within an effect can trigger cascading renders
+     ,-[src/pages/DiseaseIntelligence.tsx:99:5]
+  97 | 
+  98 |   useEffect(() => {
+     :   ^^^^|^^^^
+     :       `-- This is the containing effect
+  99 |     runCustomEvaluation();
+     :     ^^^^^^^^^|^^^^^^^^^
+     :              `-- Avoid calling setState() directly within an effect
+ 100 |   }, [simDO, simTemp, simAmmonia, simMortality, simFeedResp, selectedPondId]);
+     `----
+  help: Effects should synchronize React with external systems. Calling setState synchronously inside an effect starts another render and is usually unnecessary. Derive the value during render, initialize state directly, or update it from the event that caused the change. Use an effect only when synchronizing with an external system.
+  note: React Compiler skipped optimizing this component or hook. Additional guidance: https://react.dev/reference/eslint-plugin-react-hooks/lints/set-state-in-effect
+
+  ! react-hooks(exhaustive-deps): React Hook useEffect has a missing dependency: 'runCustomEvaluation'
+     ,-[src/pages/DiseaseIntelligence.tsx:100:6]
+  98 |   useEffect(() => {
+  99 |     runCustomEvaluation();
+     :     ^^^^^^^^^|^^^^^^^^^
+     :              `-- useEffect uses `runCustomEvaluation` here
+ 100 |   }, [simDO, simTemp, simAmmonia, simMortality, simFeedResp, selectedPondId]);
+     :      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 101 | 
+     `----
+  help: Either include it or remove the dependency array.
+
+Found 153 warnings and 0 errors.
+Finished in 22ms on 28 files with 116 rules using 10 threads.

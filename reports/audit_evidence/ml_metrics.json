@@ -1,0 +1,204 @@
+{
+  "model_id": "AQUAINTEL-RF-DISEASE-V1.0-SYNTHETIC",
+  "model_name": "Multi-Pathogen Balanced Random Forest Classifier",
+  "version": "1.0.0-synthetic",
+  "created_at": "2026-10-23T07:47:03.129253+00:00",
+  "target_species": "Litopenaeus vannamei",
+  "target_classes": [
+    "AHPND_EMS",
+    "BLACK_GILL",
+    "EHP",
+    "HEALTHY",
+    "MIXED_OR_UNRESOLVED",
+    "VIBRIOSIS",
+    "WSSV"
+  ],
+  "feature_columns": [
+    "culture_day",
+    "temperature_c",
+    "do_mg_l",
+    "ph",
+    "salinity_ppt",
+    "tan_mg_l",
+    "unionized_nh3_mg_l",
+    "turbidity_ntu",
+    "water_level_m",
+    "estimated_biomass_kg",
+    "feed_kg_last_24h",
+    "mortality_count_24h",
+    "abnormal_behavior_observed",
+    "feed_resp_NORMAL",
+    "feed_resp_REDUCED",
+    "feed_resp_ABNORMAL",
+    "feed_resp_UNKNOWN"
+  ],
+  "training_dataset": "synthetic_demo_data_NOT_FOR_VALIDATED_TRAINING.csv",
+  "is_synthetic": true,
+  "validation_status": "NOT_VALIDATED_FOR_REAL_WORLD_DISEASE_PREDICTION",
+  "provenance": "Synthetic Demonstration Fixture (1,200 rows total: 960 train / 240 test)",
+  "evaluation_metrics": {
+    "accuracy": 0.55,
+    "macro_f1": 0.2314,
+    "weighted_f1": 0.4937,
+    "baseline_logistic_regression_macro_f1": 0.2902,
+    "per_class_report": {
+      "AHPND_EMS": {
+        "precision": 0.08333333333333333,
+        "recall": 0.041666666666666664,
+        "f1-score": 0.05555555555555555,
+        "support": 24.0
+      },
+      "BLACK_GILL": {
+        "precision": 0.3333333333333333,
+        "recall": 0.2,
+        "f1-score": 0.25,
+        "support": 15.0
+      },
+      "EHP": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 9.0
+      },
+      "HEALTHY": {
+        "precision": 0.7,
+        "recall": 0.9105691056910569,
+        "f1-score": 0.7915194346289752,
+        "support": 123.0
+      },
+      "MIXED_OR_UNRESOLVED": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
+        "support": 10.0
+      },
+      "VIBRIOSIS": {
+        "precision": 0.2,
+        "recall": 0.20833333333333334,
+        "f1-score": 0.20408163265306123,
+        "support": 24.0
+      },
+      "WSSV": {
+        "precision": 0.3235294117647059,
+        "recall": 0.3142857142857143,
+        "f1-score": 0.3188405797101449,
+        "support": 35.0
+      },
+      "accuracy": 0.55,
+      "macro avg": {
+        "precision": 0.23431372549019608,
+        "recall": 0.23926497428239585,
+        "f1-score": 0.23142817179253386,
+        "support": 240.0
+      },
+      "weighted avg": {
+        "precision": 0.45509803921568626,
+        "recall": 0.55,
+        "f1-score": 0.4937400136092743,
+        "support": 240.0
+      }
+    },
+    "confusion_matrix": {
+      "labels": [
+        "AHPND_EMS",
+        "BLACK_GILL",
+        "EHP",
+        "HEALTHY",
+        "MIXED_OR_UNRESOLVED",
+        "VIBRIOSIS",
+        "WSSV"
+      ],
+      "matrix": [
+        [
+          1,
+          1,
+          0,
+          3,
+          0,
+          10,
+          9
+        ],
+        [
+          0,
+          3,
+          0,
+          12,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          1,
+          0,
+          8,
+          0,
+          0,
+          0
+        ],
+        [
+          2,
+          4,
+          0,
+          112,
+          0,
+          1,
+          4
+        ],
+        [
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0
+        ],
+        [
+          3,
+          0,
+          0,
+          6,
+          0,
+          5,
+          10
+        ],
+        [
+          6,
+          0,
+          0,
+          9,
+          0,
+          9,
+          11
+        ]
+      ]
+    }
+  },
+  "top_features": {
+    "mortality_count_24h": 0.1336,
+    "turbidity_ntu": 0.1136,
+    "estimated_biomass_kg": 0.0777,
+    "salinity_ppt": 0.0745,
+    "feed_kg_last_24h": 0.0732,
+    "temperature_c": 0.0702,
+    "do_mg_l": 0.0693,
+    "culture_day": 0.0667,
+    "water_level_m": 0.0667,
+    "ph": 0.0641,
+    "tan_mg_l": 0.0637,
+    "unionized_nh3_mg_l": 0.0586,
+    "abnormal_behavior_observed": 0.0284,
+    "feed_resp_REDUCED": 0.0195,
+    "feed_resp_NORMAL": 0.0115,
+    "feed_resp_ABNORMAL": 0.0051,
+    "feed_resp_UNKNOWN": 0.0036
+  },
+  "limitations": [
+    "Trained exclusively on synthetic demonstration data.",
+    "Not validated against laboratory-confirmed PCR clinical outcomes.",
+    "Cannot be deployed for real-world therapeutic or farm culling decisions.",
+    "Water quality telemetry alone indicates environmental vulnerability, not definitive infection."
+  ],
+  "clinical_disclaimer": "CRITICAL NOTICE: Laboratory RT-qPCR molecular testing and veterinarian pathology examination are required before taking farm intervention decisions."
+}
