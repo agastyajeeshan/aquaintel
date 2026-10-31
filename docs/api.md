@@ -67,3 +67,20 @@ ReDoc Documentation: `http://localhost:8000/redoc`
 | `POST` | `/feeding/calculate` | Compute biomass-driven ration with DO/ammonia safety gates |
 | `GET` | `/disease/risks` | Multi-pathogen environmental disease risk scoring (WSSV, Vibriosis, EMS/AHPND) |
 | `POST` | `/disease/evaluate` | Custom scenario evaluator with transparent additive stressor points |
+
+---
+
+## 6. Dynamic Climate Adaptation & Predictive Intelligence (`/api/v1/climate`)
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/climate/weather/current` | Real-time weather observation for farm coordinates (14.4426°N, 79.9865°E) with cache metadata |
+| `GET` | `/climate/weather/forecast` | Next 24h & 7d weather forecast (hourly temp, humidity, rainfall mm, solar W/m², wind) |
+| `GET` | `/climate/analysis` | Fleet-wide climate adaptation analysis and active anomaly detection |
+| `GET` | `/climate/ponds/{pond_id}/analysis` | Pond-specific climate evaluation: direct vs calculated metrics, stress factors, and safety interlocks |
+| `GET` | `/climate/ponds/{pond_id}/forecast` | Multi-horizon pond predictions (3h, 6h, 12h, 24h, 72h, 168h) with 90% confidence uncertainty intervals |
+| `GET` | `/climate/ponds/{pond_id}/recommendations`| Adaptive aeration and feeding decision-support recommendations with operator approval requirement |
+| `POST` | `/climate/ponds/{pond_id}/approve` | Operator approval recording for recommended climate adaptation actions |
+| `GET` | `/climate/models/performance` | Walk-forward benchmark metrics (MAE, RMSE) comparing physics-informed models vs Persistence & Seasonal-Naive baselines |
+| `POST` | `/climate/simulate` | Inject climate edge-case scenarios (`SUMMER_RAIN`, `RAINY_SUNSHINE`, `HEAVY_RAIN`, `HOT_AFTERNOON`, `COLD_SNAP`, `SENSOR_WEATHER_CONFLICT`) |
+

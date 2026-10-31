@@ -155,21 +155,31 @@ cd backend
 venv/bin/pytest -v
 ```
 
-Tests verify:
-- Database connectivity (`SELECT 1`)
-- Table integrity and 10-pond seed dataset (70 sensors, 40 aerators, 10 feeders, 11 IoT controllers, 4 default users)
-- Dual health check endpoints (`/health` and `/api/health`)
-- Root operational status endpoint (`/`)
-- Aggregate farm overview KPIs (`/api/farms/overview`)
-- Fleet pond status and water quality matrix (`/api/ponds`)
-- IoT telemetry simulator status (`/api/simulator/status`)
+The test suite runs **46 automated tests** (all passing):
+- **Database & Table Integrity:** Database connectivity (`SELECT 1`), 10-pond seed dataset (70 sensors, 40 aerators, 10 feeders, 11 IoT controllers, 4 default users)
+- **Health & Diagnostics:** Dual health check endpoints (`/health` and `/api/health`) and root operational status endpoint (`/`)
+- **Fleet Operations:** Farm overview KPIs (`/api/farms/overview`) and fleet pond status with water quality matrix (`/api/ponds`)
+- **IoT Simulator:** Simulator status and stress event injection (`/api/simulator/status`)
+- **Climate Adaptation & Weather Intelligence (`test_climate_adaptation.py` — 14 tests):**
+  - Live and cached weather observations (`/api/v1/climate/weather/current`)
+  - 24h & 7d weather forecasting (`/api/v1/climate/weather/forecast`)
+  - All 5 climate adaptation scenarios: `SUMMER_RAIN`, `RAINY_SUNSHINE`, `HEAVY_RAIN`, `HOT_AFTERNOON`, `COLD_SNAP`
+  - Emergency hypoxic priority override ($DO < 3.2\text{ mg/L}$ immediately mandates emergency aeration and feed lockout)
+  - Weather provider graceful fallback on API network failure
+  - Missing and stale sensor handling
+  - Sensor-weather conflict detection (e.g., heavy rain detected by radar, but pond water level dropping)
+  - Multi-horizon predictive forecasting with calibrated 90% confidence uncertainty intervals
+  - Model benchmarking vs Persistence and Seasonal-Naive baselines
+  - Operator recommendation approval audit trail
+  - Interactive scenario simulation endpoint
 
 ### Frontend Verification
 ```bash
 cd frontend
-npm run build   # Type-check and Vite bundle
-npm run lint    # Oxlint static analysis
+npm run build   # Type-check and Vite bundle (0 errors)
+npm run lint    # Oxlint static analysis (0 errors)
 ```
+
 
 ---
 

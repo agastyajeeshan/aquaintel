@@ -39,7 +39,7 @@ SENSE ──► VALIDATE ──► ANALYZE ──► PREDICT ──► DECIDE �
 
 ## 🗺️ Application Architecture & Page Modules
 
-AquaIntel comprises **16 operational modules**:
+AquaIntel comprises **17 operational modules**:
 
 1. **Command Center Dashboard:** High-level farm KPIs (10 ponds, 8 healthy, 1 warning, 1 critical, 12,450 kg biomass, 384 kg today's feed, 395 kWh electricity), 10 pond fleet status grid, and active alarm ticker.
 2. **Ponds Fleet Management:** Visual status cards for all 10 ponds with color badges (`GREEN = Healthy`, `YELLOW = Warning`, `ORANGE = High Risk`, `RED = Critical`), live parameters (DO, Temp, pH, Ammonia, Salinity), and aerator/feeder statuses.
@@ -47,16 +47,18 @@ AquaIntel comprises **16 operational modules**:
 4. **Water Quality Intelligence:** Multi-pond telemetry comparison matrix, biological threshold safety reference (*Litopenaeus vannamei* standards), and CSV dataset export.
 5. **Smart Feeding Engine:** Biomass-driven nutrition model, today's feed vs recommended feed, FCR tracking, explainable safety interlock box (*"Why was feeding reduced? DO below preferred level"*), and feeder actuator controls (**START**, **STOP**, **SCHEDULE**, **OVERRIDE**).
 6. **Automated Aeration & Power:** Multi-stage DO hysteresis algorithm (*Minimum 10-minute ON/OFF anti-cycle motor protection*), runtime hours, kWh tracking, electricity tariff calculations (₹7.50 / kWh), and emergency boost mode.
-7. **Disease Risk Intelligence:** Explainable AI-based risk models for **WSSV** (White Spot), **Vibriosis**, and **EMS/AHPND**, transparent additive stressor point breakdown (+25 low DO, +20 temp drop, +30 high ammonia), agronomic action steps, and prominent veterinary PCR disclaimer.
-8. **Computer Vision Inspection:** Check-tray feeding inspection, optical detection of shrimp activity vigor, uneaten pellet count, tray clearance %, dead shrimp identification, bounding box HUD overlay, and clinical disclaimer.
-9. **IoT Devices & Network:** 30 edge nodes (ESP32-Pond-Master nodes, LoRa Gateway 865.2 MHz, Multi-Probe Sensor buoys, Feeder RTUs), battery levels, RSSI signal dBm, firmware versions, and node provisioning modal.
-10. **Alert Management Center:** Multi-tier alarm registry (Low DO, High Ammonia, Thermal Shock, Sensor Failure), severity filters, and **Acknowledge**, **Resolve**, and **Ignore** actions.
-11. **Production Analytics:** Multi-cycle growth rates (g/week), FCR benchmarking (1.24 vs 1.65 industry baseline), and energy source breakdown (Grid, Solar Microgrid, Silent DG Set).
-12. **ROI & Commercial Viability:** Complete 10-hectare financial model: initial CAPEX (₹22 Lakhs), annual OPEX (₹2.2 Lakhs), feed savings (₹41.25 Lakhs), energy savings (₹3.24 Lakhs), disease loss prevention (₹1.06 Crores), net benefit (₹1.56 Crores/yr), payback period (1.7 Months), and interactive Conservative / Base / Optimistic scenario sliders.
-13. **Farm Asset Management:** Farm profile, stocking batches, species (*L. vannamei*), stocking density (45 PL/m²), feed warehouse inventory, and 24/7 technical team roster.
-14. **Equipment Maintenance:** Scheduled preventive maintenance for aerator gearboxes, optical DO membrane calibrations, silent DG set oil servicing, and technician sign-offs.
-15. **Compliance Reports:** Daily farm operational reports, biological census tables, print-friendly view, and CSV export.
-16. **System Settings & RBAC:** Sensor thresholds, aeration hysteresis duration, notification channels (In-app, Email, SMS, WhatsApp), and role-based user management (**ADMIN**, **FARM MANAGER**, **OPERATOR**, **VIEWER**).
+7. **Dynamic Climate Adaptation & Forecasting:** Multi-horizon predictive forecasting (3h, 6h, 12h, 24h, 72h, 7d), live Open-Meteo weather integration for Nellore (14.4426°N, 79.9865°E), direct vs calculated metric separation (Benson & Krause DO saturation, Emerson-Trussell unionized $NH_3$), dynamic climate anomaly classification (`SUMMER_RAIN`, `RAINY_SUNSHINE`, `HEAVY_RAIN`, `HOT_AFTERNOON`, `COLD_SNAP`), and human-in-the-loop operator approval for climate actions.
+8. **Disease Risk Intelligence:** Explainable AI-based risk models for **WSSV** (White Spot), **Vibriosis**, and **EMS/AHPND**, transparent additive stressor point breakdown (+25 low DO, +20 temp drop, +30 high ammonia), agronomic action steps, and prominent veterinary PCR disclaimer.
+9. **Computer Vision Inspection:** Check-tray feeding inspection, optical detection of shrimp activity vigor, uneaten pellet count, tray clearance %, dead shrimp identification, bounding box HUD overlay, and clinical disclaimer.
+10. **IoT Devices & Network:** 30 edge nodes (ESP32-Pond-Master nodes, LoRa Gateway 865.2 MHz, Multi-Probe Sensor buoys, Feeder RTUs), battery levels, RSSI signal dBm, firmware versions, and node provisioning modal.
+11. **Alert Management Center:** Multi-tier alarm registry (Low DO, High Ammonia, Thermal Shock, Sensor Failure), severity filters, and **Acknowledge**, **Resolve**, and **Ignore** actions.
+12. **Production Analytics:** Multi-cycle growth rates (g/week), FCR benchmarking (1.24 vs 1.65 industry baseline), and energy source breakdown (Grid, Solar Microgrid, Silent DG Set).
+13. **ROI & Commercial Viability:** Complete 10-hectare financial model: initial CAPEX (₹22 Lakhs), annual OPEX (₹2.2 Lakhs), feed savings (₹41.25 Lakhs), energy savings (₹3.24 Lakhs), disease loss prevention (₹1.06 Crores), net benefit (₹1.56 Crores/yr), payback period (1.7 Months), and interactive Conservative / Base / Optimistic scenario sliders.
+14. **Farm Asset Management:** Farm profile, stocking batches, species (*L. vannamei*), stocking density (45 PL/m²), feed warehouse inventory, and 24/7 technical team roster.
+15. **Equipment Maintenance:** Scheduled preventive maintenance for aerator gearboxes, optical DO membrane calibrations, silent DG set oil servicing, and technician sign-offs.
+16. **Compliance Reports:** Daily farm operational reports, biological census tables, print-friendly view, and CSV export.
+17. **System Settings & RBAC:** Sensor thresholds, aeration hysteresis duration, notification channels (In-app, Email, SMS, WhatsApp), and role-based user management (**ADMIN**, **FARM MANAGER**, **OPERATOR**, **VIEWER**).
+
 
 ---
 

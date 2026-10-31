@@ -59,3 +59,24 @@ AquaIntel strictly segregates responsibilities across independent services:
 - **Local Autonomy:** Loss of internet or cloud connectivity does **not** interrupt critical pond aeration. The local edge state machine continues dissolved oxygen monitoring and hysteresis aerator control.
 - **Dry-Run & Simulation:** The platform includes an internal deterministic telemetry generator capable of simulating all 15 operational and failure scenarios without physical hardware.
 - **Auditability:** Every command, parameter change, threshold adjustment, and alert acknowledgment is immutably logged to the `audit_logs` table.
+
+---
+
+## 4. Dynamic Climate Adaptation Engine & Multi-Horizon Predictive Forecasting
+
+To prevent rigid seasonal assumptions (e.g., assuming summer is always dry or winter is always cold), AquaIntel integrates a real-time weather provider with pond sensor telemetry:
+
+1. **Weather Service (`WeatherService`):** Connects to Open-Meteo REST API using the farm's exact coordinates (14.4426°N, 79.9865°E in Nellore, AP). Incorporates a 15-minute in-memory cache, data freshness tracking, and automatic coastal diurnal empirical simulation fallback.
+2. **Measurement vs. Calculated Metric Segregation:**
+   - *Direct Sensors:* Water temperature (°C), DO (mg/L), pH, Salinity (ppt), TAN (mg/L), Turbidity (NTU), Water level (cm).
+   - *Calculated Estimates:* Unionized Ammonia ($NH_3$) derived via Emerson & Trussell equilibria equations; Dissolved Oxygen saturation percentage derived via Benson & Krause equations.
+3. **Multi-Horizon Predictive Forecaster (`PondPredictiveEngine`):**
+   - Forecasting horizons: **3h, 6h, 12h, 24h, 72h, and 168h (7 days)**.
+   - Outputs calibrated 90% confidence uncertainty envelopes ($\pm 1.645 \sigma$).
+   - Benchmarked against **Persistence** and **Seasonal-Naive** baseline models via walk-forward validation (reporting MAE and RMSE).
+4. **Dynamic Stressor & Anomaly Detection:**
+   - Detects `SUMMER_RAIN` (thermal stratification risk and osmotic shock), `RAINY_SUNSHINE` (algal crash and rapid photo-oxidation), `HEAVY_RAIN` (freshwater dilution and dyke overflow risk), `HOT_AFTERNOON` (super-saturation followed by nocturnal oxygen collapse), `COLD_SNAP` (reduced shrimp gut transit and metabolic slow-down), and `SENSOR_WEATHER_CONFLICT`.
+5. **Fail-Safe Decoupling & Operator Governance:**
+   - Emergency hypoxic safety interlocks ($DO < 3.2\text{ mg/L}$) take absolute precedence over weather forecasts, immediately enforcing maximum aeration and 100% feed lockout.
+   - Physical feed and aeration adaptations strictly require explicit operator approval before actuation dispatch.
+
