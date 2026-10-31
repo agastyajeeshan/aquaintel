@@ -30,6 +30,7 @@ from .api.settings import router as settings_router
 from .api.simulator import router as simulator_router, websocket_telemetry_endpoint
 from .api.telemetry import router as telemetry_router
 from .api.ai import router as ai_router
+from .api.climate import router as climate_router
 
 
 @asynccontextmanager
@@ -77,12 +78,14 @@ api_routers = [
     settings_router,
     simulator_router,
     telemetry_router,
-    ai_router
+    ai_router,
+    climate_router
 ]
 
 for r in api_routers:
     app.include_router(r, prefix="/api/v1")
     app.include_router(r, prefix="/api")
+
 
 # Direct WebSocket endpoint on root ws path as well
 app.add_api_websocket_route("/ws/telemetry", websocket_telemetry_endpoint)

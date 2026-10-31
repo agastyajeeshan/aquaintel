@@ -314,3 +314,65 @@ class IngestedTelemetry(Base):
     payload = Column(JSON, nullable=False)
     received_at = Column(DateTime, default=datetime.utcnow, index=True)
 
+class WeatherObservation(Base):
+    __tablename__ = "weather_observations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=True)
+    air_temperature_c = Column(Float, nullable=False)
+    relative_humidity_pct = Column(Float, nullable=False)
+    rainfall_mm = Column(Float, default=0.0)
+    wind_speed_kmh = Column(Float, default=0.0)
+    wind_direction_deg = Column(Float, default=0.0)
+    cloud_cover_pct = Column(Float, default=0.0)
+    solar_radiation_wm2 = Column(Float, default=0.0)
+    atmospheric_pressure_hpa = Column(Float, default=1013.25)
+    weather_code = Column(Integer, default=0)
+    weather_description = Column(String(100), default="Clear")
+    provider_name = Column(String(100), default="Open-Meteo")
+    is_simulated = Column(Boolean, default=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+class WeatherForecast(Base):
+    __tablename__ = "weather_forecasts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=True)
+    horizon_hours = Column(Integer, nullable=False)
+    target_timestamp = Column(DateTime, nullable=False, index=True)
+    air_temperature_c = Column(Float, nullable=False)
+    relative_humidity_pct = Column(Float, nullable=False)
+    rainfall_mm = Column(Float, default=0.0)
+    rainfall_probability_pct = Column(Float, default=0.0)
+    solar_radiation_wm2 = Column(Float, default=0.0)
+    provider_name = Column(String(100), default="Open-Meteo")
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class ClimateAdaptationEvent(Base):
+    __tablename__ = "climate_adaptation_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pond_id = Column(Integer, ForeignKey("ponds.id"), nullable=False, index=True)
+    condition_key = Column(String(50), nullable=False, index=True)  # SUMMER_RAIN, RAINY_SUNSHINE, HEAVY_RAIN, HOT_AFTERNOON, COLD_SNAP
+    title = Column(String(150), nullable=False)
+    severity = Column(String(20), default="NORMAL")  # NORMAL, WARNING, HIGH, CRITICAL
+    detected_stressors = Column(JSON, default=list)
+    aeration_action = Column(String(100), nullable=False)
+    feeding_action = Column(String(100), nullable=False)
+    feed_adjustment_pct = Column(Float, default=0.0)
+    recommendations = Column(JSON, default=list)
+    operator_approved = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class PondForecastRecord(Base):
+    __tablename__ = "pond_forecast_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    pond_id = Column(Integer, ForeignKey("ponds.id"), nullable=False, index=True)
+    horizon_hours = Column(Integer, nullable=False)  # 3, 6, 12, 24, 72, 168
+    target_timestamp = Column(DateTime, nullable=False, index=True)
+    predicted_metrics = Column(JSON, nullable=False)
+    uncertainty_bounds = Column(JSON, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+
