@@ -375,4 +375,108 @@ class PondForecastRecord(Base):
     uncertainty_bounds = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
 
+class AutomationSafetyConfig(Base):
+    __tablename__ = "automation_safety_configs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    farm_id = Column(Integer, default=1, index=True)
+    operating_mode = Column(String(30), default="AUTOMATIC_SAFETY", nullable=False)  # MONITOR, ASSISTED, AUTOMATIC_SAFETY, FULL_AUTOMATION
+    
+    # Critical Safety Thresholds
+    emergency_do_threshold = Column(Float, default=3.8)  # mg/L
+    boost_do_threshold = Column(Float, default=4.8)      # mg/L
+    standby_do_threshold = Column(Float, default=6.8)    # mg/L
+    max_safe_temp_c = Column(Float, default=33.5)        # °C
+    min_safe_temp_c = Column(Float, default=26.0)        # °C
+    tan_warning_mg_l = Column(Float, default=0.08)       # mg/L
+    tan_critical_mg_l = Column(Float, default=0.15)      # mg/L
+    unionized_nh3_critical_mg_l = Column(Float, default=0.05)  # Emerson formula
+    ph_min = Column(Float, default=7.5)
+    ph_max = Column(Float, default=8.5)
+    salinity_min_ppt = Column(Float, default=12.0)
+    salinity_max_ppt = Column(Float, default=28.0)
+    flood_water_level_m = Column(Float, default=1.45)    # meters
+    
+    # Hysteresis & Motor Interlocks
+    min_on_seconds = Column(Integer, default=600)        # 10 min
+    min_off_seconds = Column(Integer, default=600)       # 10 min
+    cooldown_seconds = Column(Integer, default=300)      # 5 min
+    
+    # Autonomous Permissions
+    auto_aeration_enabled = Column(Boolean, default=True)
+    auto_feeder_cutoff_enabled = Column(Boolean, default=True)
+    auto_backup_failover_enabled = Column(Boolean, default=True)
+    auto_flood_safeguard_enabled = Column(Boolean, default=True)
+    auto_water_exchange_enabled = Column(Boolean, default=False)  # Requires explicit commissioning
+    chemical_dosing_blocked = Column(Boolean, default=True)      # HARD SAFETY LOCK: Never automatic
+    
+    # Audit & Status
+    last_mode_change_at = Column(DateTime, default=datetime.utcnow)
+    changed_by_user = Column(String(100), default="Dr. K. Srinivas (Chief Agritech Director)")
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+class AutonomousDecisionEvent(Base):
+    __tablename__ = "autonomous_decision_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_id = Column(String(64), unique=True, index=True, nullable=False)
+    pond_id = Column(Integer, ForeignKey("ponds.id"), nullable=False, index=True)
+    severity = Column(String(20), nullable=False, default="NORMAL")  # NORMAL, ADVISORY, WARNING, CRITICAL, EMERGENCY
+    condition_type = Column(String(60), nullable=False, index=True)
+    # e.g. LOW_DO_HYPOXIA, UNSAFE_FEEDING_TEMP, UNSAFE_FEEDING_TAN, HIGH_TOXIC_AMMONIA,
+    # HEAVY_RAIN_FLOOD, AERATOR_TRIP_FAILOVER, SENSOR_ANOMALY_STALE, DISEASE_VULNERABILITY_SPIKE
+    
+    title = Column(String(150), nullable=False)
+    trigger_parameters = Column(JSON, default=dict)      # Raw measurements & threshold breaches
+    multi_parameter_analysis = Column(JSON, default=dict) # Calculated indexes: NH3, thermal-DO coupling, etc.
+    weather_context = Column(JSON, default=dict)         # Temperature, rainfall, solar radiation
+    decision_rationale = Column(Text, nullable=False)    # Deterministic rule explanation
+    selected_action = Column(String(100), nullable=False)
+    action_mode = Column(String(30), default="AUTOMATIC") # AUTOMATIC, ADVISORY_ONLY, BLOCKED_BY_SAFETY
+    is_executed = Column(Boolean, default=False)
+    status = Column(String(30), default="DETECTED")      # DETECTED, ACTION_EXECUTED, RECOVERY_VERIFIED, FAILED, ESCALATED
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class AutonomousActionRecord(Base):
+    __tablename__ = "autonomous_action_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    action_id = Column(String(64), unique=True, index=True, nullable=False)
+    decision_event_id = Column(String(64), ForeignKey("autonomous_decision_events.event_id"), nullable=True)
+    pond_id = Column(Integer, nullable=False, index=True)
+    equipment_type = Column(String(50), nullable=False)   # AERATOR, BACKUP_AERATOR, FEEDER, DRAIN_VALVE, PUMP
+    equipment_code = Column(String(50), nullable=False)
+    command_action = Column(String(50), nullable=False)   # START, STOP, CASCADE_ALL, SUSPEND, RESUME, FAILOVER_BACKUP
+    command_id = Column(String(64), nullable=True)
+    parameters = Column(JSON, default=dict)
+    
+    dispatched_at = Column(DateTime, default=datetime.utcnow, index=True)
+    equipment_ack_at = Column(DateTime, nullable=True)
+    equipment_ack_status = Column(String(30), default="PENDING")  # PENDING, ACKNOWLEDGED, MOTOR_FAULT_TRIPPED, TIMEOUT
+    
+    # Closed-Loop Verification
+    recovery_verified = Column(Boolean, default=False)
+    recovery_verified_at = Column(DateTime, nullable=True)
+    recovery_telemetry = Column(JSON, default=dict)       # Reading confirming normalization
+    notes = Column(Text, nullable=True)
+
+class NotificationLog(Base):
+    __tablename__ = "notification_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    notification_id = Column(String(64), unique=True, index=True, nullable=False)
+    pond_id = Column(Integer, nullable=True, index=True)
+    event_id = Column(String(64), nullable=True, index=True)
+    channel = Column(String(30), default="IN_APP")       # IN_APP, DASHBOARD, PUSH, SMS, EMAIL, VOICE
+    severity = Column(String(20), default="INFO")        # INFO, ADVISORY, WARNING, CRITICAL, EMERGENCY
+    title = Column(String(150), nullable=False)
+    message = Column(Text, nullable=False)
+    structured_payload = Column(JSON, default=dict)      # Exact readings, thresholds, timestamps, actions
+    delivered = Column(Boolean, default=True)
+    delivery_status = Column(String(30), default="DELIVERED")
+    dedup_hash = Column(String(64), nullable=True, index=True)
+    escalation_level = Column(Integer, default=1)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+
+
 

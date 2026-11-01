@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from .models import (
     User, Farm, Pond, Sensor, SensorReading, Feeder, FeedingLog,
     Aerator, AerationEvent, DiseasePrediction, Alert, IoTDevice,
-    CameraObservation, MaintenanceRecord, FarmSettings
+    CameraObservation, MaintenanceRecord, FarmSettings,
+    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord, NotificationLog
 )
 from .core.disease_engine import disease_risk_engine
 
@@ -430,5 +431,101 @@ def seed_database(db: Session):
     )
     db.add(farm_settings)
 
+    # Initial Autonomous Safety Configuration
+    auto_config = AutomationSafetyConfig(
+        farm_id=farm.id,
+        operating_mode="AUTOMATIC_SAFETY",
+        emergency_do_threshold=3.8,
+        boost_do_threshold=4.8,
+        standby_do_threshold=6.8,
+        max_safe_temp_c=33.5,
+        min_safe_temp_c=26.0,
+        tan_warning_mg_l=0.08,
+        tan_critical_mg_l=0.15,
+        unionized_nh3_critical_mg_l=0.05,
+        ph_min=7.5,
+        ph_max=8.5,
+        salinity_min_ppt=12.0,
+        salinity_max_ppt=28.0,
+        flood_water_level_m=1.45,
+        min_on_seconds=600,
+        min_off_seconds=600,
+        auto_aeration_enabled=True,
+        auto_feeder_cutoff_enabled=True,
+        auto_backup_failover_enabled=True,
+        auto_flood_safeguard_enabled=True,
+        auto_water_exchange_enabled=False,
+        chemical_dosing_blocked=True,
+        changed_by_user="Dr. K. Srinivas (Chief Agritech Director)"
+    )
+    db.add(auto_config)
+
+    # Seed initial closed-loop event demonstrating:
+    # Condition detected -> Risk assessed -> Action selected -> Command sent -> Equipment confirmed -> Pond recovery verified
+    sample_evt = AutonomousDecisionEvent(
+        event_id="EVT-INIT-HYPOXIA-01",
+        pond_id=8,
+        severity="CRITICAL",
+        condition_type="LOW_DO_HYPOXIA",
+        title="Critical Low DO Emergency Cascade — Pond 08",
+        trigger_parameters={"do_mg_l": 3.4, "threshold": 3.8},
+        multi_parameter_analysis={"temperature_c": 29.8, "ph": 8.1, "tan_mg_l": 0.12},
+        weather_context={"rainfall_mm": 0.0},
+        decision_rationale="DO dropped to 3.4 mg/L during early morning benthic demand. Automatic 100% cascade triggered.",
+        selected_action="CASCADE_ALL_AERATORS_AND_HALT_FEEDING",
+        action_mode="AUTOMATIC",
+        is_executed=True,
+        status="RECOVERY_VERIFIED",
+        created_at=now - timedelta(hours=2)
+    )
+    db.add(sample_evt)
+
+    sample_act = AutonomousActionRecord(
+        action_id="ACT-INIT-AER-P08-1",
+        decision_event_id="EVT-INIT-HYPOXIA-01",
+        pond_id=8,
+        equipment_type="AERATOR",
+        equipment_code="AER-P08-1",
+        command_action="START",
+        command_id="CMD-INIT-AER-01",
+        parameters={"reason": "Autonomous Critical Low DO Emergency Cascade"},
+        dispatched_at=now - timedelta(hours=2),
+        equipment_ack_status="ACKNOWLEDGED",
+        equipment_ack_at=now - timedelta(hours=2, seconds=-1),
+        recovery_verified=True,
+        recovery_verified_at=now - timedelta(hours=1, minutes=15),
+        recovery_telemetry={"verified_do_mg_l": 5.4, "threshold": 4.5},
+        notes="Closed-loop verification confirmed: DO restored to 5.4 mg/L within 45 minutes."
+    )
+    db.add(sample_act)
+
+    sample_notif = NotificationLog(
+        notification_id="NOTIF-INIT-HYPOXIA-01",
+        pond_id=8,
+        event_id="EVT-INIT-HYPOXIA-01",
+        channel="IN_APP,DASHBOARD,PUSH,SMS",
+        severity="CRITICAL",
+        title="CRITICAL HYPOXIA — Pond 08 DO 3.4 mg/L",
+        message="DO dropped to 3.4 mg/L. Cascade aeration engaged automatically. Closed-loop recovery confirmed at 5.4 mg/L.",
+        structured_payload={
+            "pond_id": 8,
+            "condition_detected": "LOW_DO_HYPOXIA",
+            "actual_reading": 3.4,
+            "unit": "mg/L",
+            "configured_threshold": 3.8,
+            "severity": "CRITICAL",
+            "automatic_action_taken": "CASCADE_ALL_AERATORS_AND_HALT_FEEDING",
+            "action_status": "RECOVERY_VERIFIED",
+            "recommended_next_steps": "Continue monitoring DO saturation."
+        },
+        delivered=True,
+        delivery_status="DELIVERED",
+        dedup_hash="init_hypoxia_hash",
+        escalation_level=2,
+        timestamp=now - timedelta(hours=2)
+    )
+    db.add(sample_notif)
+
     db.commit()
-    print("[SUCCESS] Seed complete! 10 ponds, 70 sensors, 40 aerators, 10 feeders, alerts, and IoT nodes initialized.")
+    print("[SUCCESS] Seed complete! 10 ponds, 70 sensors, 40 aerators, 10 feeders, autonomous safety engine initialized.")
+

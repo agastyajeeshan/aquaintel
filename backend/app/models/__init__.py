@@ -3,7 +3,8 @@ from .models import (
     Aerator, AerationEvent, DiseasePrediction, Alert, IoTDevice,
     CameraObservation, MaintenanceRecord, FarmSettings,
     DeviceCommand, AuditLog, IngestedTelemetry,
-    WeatherObservation, WeatherForecast, ClimateAdaptationEvent, PondForecastRecord
+    WeatherObservation, WeatherForecast, ClimateAdaptationEvent, PondForecastRecord,
+    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord, NotificationLog
 )
 
 __all__ = [
@@ -11,6 +12,7 @@ __all__ = [
     "Aerator", "AerationEvent", "DiseasePrediction", "Alert", "IoTDevice",
     "CameraObservation", "MaintenanceRecord", "FarmSettings",
     "DeviceCommand", "AuditLog", "IngestedTelemetry",
-    "WeatherObservation", "WeatherForecast", "ClimateAdaptationEvent", "PondForecastRecord"
+    "WeatherObservation", "WeatherForecast", "ClimateAdaptationEvent", "PondForecastRecord",
+    "AutomationSafetyConfig", "AutonomousDecisionEvent", "AutonomousActionRecord", "NotificationLog"
 ]
 

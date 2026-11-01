@@ -31,6 +31,7 @@ from .api.simulator import router as simulator_router, websocket_telemetry_endpo
 from .api.telemetry import router as telemetry_router
 from .api.ai import router as ai_router
 from .api.climate import router as climate_router
+from .api.autonomous import router as autonomous_router
 
 
 @asynccontextmanager
@@ -79,7 +80,8 @@ api_routers = [
     simulator_router,
     telemetry_router,
     ai_router,
-    climate_router
+    climate_router,
+    autonomous_router
 ]
 
 for r in api_routers:
