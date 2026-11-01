@@ -1,18 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
 import {
-  TrendingUp,
-  CircleDollarSign,
-  PieChart,
   Calculator,
-  ArrowRight,
   Info,
-  CheckCircle,
-  ShieldCheck,
   Zap,
   UtensilsCrossed,
   Users,
   Activity,
+  CircleDollarSign,
+  Loader2,
 } from "lucide-react";
 
 export const ROIBusiness: React.FC = () => {
@@ -114,22 +110,27 @@ export const ROIBusiness: React.FC = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Commercial Viability & ROI Model (10-Hectare Farm)
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-[#E3F3E9] text-[#247653]">
+              <CircleDollarSign className="h-5 w-5" />
+            </span>
+            <h1 className="text-2xl font-bold text-[#172820] tracking-tight">
+              Commercial Viability & ROI Model (10-Hectare Farm)
+            </h1>
+          </div>
+          <p className="text-sm text-[#68776F] mt-1">
             CAPEX, OPEX, Feed Conversion Savings & Disease Loss Prevention Financials
           </p>
         </div>
 
         {/* Scenario Switcher Tabs */}
-        <div className="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+        <div className="flex items-center space-x-1 bg-white p-1 rounded-xl border border-[#E3EAE5] shadow-soft text-xs font-semibold">
           <button
             onClick={() => handleScenarioChange("conservative")}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               scenario === "conservative"
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-[#247653] text-white shadow-soft"
+                : "text-[#68776F] hover:text-[#172820]"
             }`}
           >
             Conservative
@@ -138,8 +139,8 @@ export const ROIBusiness: React.FC = () => {
             onClick={() => handleScenarioChange("base")}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               scenario === "base"
-                ? "bg-teal-700 text-white shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-[#247653] text-white shadow-soft"
+                : "text-[#68776F] hover:text-[#172820]"
             }`}
           >
             Base Case
@@ -148,8 +149,8 @@ export const ROIBusiness: React.FC = () => {
             onClick={() => handleScenarioChange("optimistic")}
             className={`px-3 py-1.5 rounded-lg transition-all ${
               scenario === "optimistic"
-                ? "bg-emerald-600 text-white shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
+                ? "bg-[#247653] text-white shadow-soft"
+                : "text-[#68776F] hover:text-[#172820]"
             }`}
           >
             Optimistic
@@ -157,15 +158,15 @@ export const ROIBusiness: React.FC = () => {
         </div>
       </div>
 
-      {/* Mandatory Disclaimer (Requirement 24) */}
-      <div className="p-4 rounded-xl bg-teal-50 border border-teal-200 text-teal-900 text-xs flex items-start space-x-3 shadow-subtle">
-        <Info className="h-5 w-5 text-teal-700 shrink-0 mt-0.5" />
-        <div>
-          <p className="font-bold">
+      {/* Mandatory Disclaimer */}
+      <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-950 text-xs flex items-start space-x-3 shadow-soft">
+        <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <p className="font-bold tracking-wide">
             COMMERCIAL FINANCIAL MODELING NOTICE:
           </p>
-          <p className="text-teal-800 mt-0.5">
-            <strong>Demo assumptions — replace with farm-specific quotations and operating data.</strong> Calculations benchmarked against standard semi-intensive Penaeus vannamei culture in coastal Andhra Pradesh, India.
+          <p className="text-amber-900 leading-relaxed">
+            <strong>Demonstration financial assumptions — calibrate with site-specific quotations, electricity tariffs, and farm operating history.</strong> Calculations benchmarked against standard commercial Penaeus vannamei culture in coastal Andhra Pradesh, India.
           </p>
         </div>
       </div>
@@ -173,226 +174,238 @@ export const ROIBusiness: React.FC = () => {
       {/* Primary ROI Cards Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Total CAPEX */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-subtle">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="soft-card p-5">
+          <span className="text-xs font-bold text-[#68776F] uppercase tracking-wider block">
             Initial IoT CAPEX (10 Ha)
           </span>
-          <p className="text-2xl font-black text-slate-900 mt-1">
-            ₹{(model.capex_inr / 100000).toFixed(2)} <span className="text-sm font-normal text-slate-500">Lakhs</span>
+          <p className="text-2xl font-bold text-[#172820] tabular-nums mt-1">
+            ₹{(model.capex_inr / 100000).toFixed(2)} <span className="text-sm font-normal text-[#68776F]">Lakhs</span>
           </p>
-          <span className="text-[11px] text-slate-500 font-medium">
+          <span className="text-[11px] text-[#68776F] tabular-nums">
             ₹{(model.capex_inr / 10).toLocaleString()} / Hectare complete
           </span>
         </div>
 
         {/* Annual Net Financial Benefit */}
-        <div className="bg-white p-5 rounded-2xl border border-emerald-200 bg-emerald-50/20 shadow-subtle">
-          <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider block">
+        <div className="soft-card p-5 bg-[#E3F3E9]/30 border-[#247653]/30">
+          <span className="text-xs font-bold text-[#247653] uppercase tracking-wider block">
             Annual Net Benefit
           </span>
-          <p className="text-2xl font-black text-emerald-700 mt-1">
-            ₹{(model.net_annual_benefit_inr / 100000).toFixed(2)} <span className="text-sm font-normal text-emerald-600">Lakhs</span>
+          <p className="text-2xl font-bold text-[#21845A] tabular-nums mt-1">
+            ₹{(model.net_annual_benefit_inr / 100000).toFixed(2)} <span className="text-sm font-normal text-[#21845A]">Lakhs</span>
           </p>
-          <span className="text-[11px] text-emerald-600 font-semibold">
+          <span className="text-[11px] text-[#21845A] font-semibold">
             Post annual OPEX deduction
           </span>
         </div>
 
         {/* Payback Period */}
-        <div className="bg-white p-5 rounded-2xl border border-teal-200 bg-teal-50/20 shadow-subtle">
-          <span className="text-xs font-bold text-teal-700 uppercase tracking-wider block">
+        <div className="soft-card p-5">
+          <span className="text-xs font-bold text-[#168B91] uppercase tracking-wider block">
             Payback Period
           </span>
-          <p className="text-2xl font-black text-teal-800 mt-1">
-            {model.payback_months} <span className="text-sm font-normal text-teal-600">Months</span>
+          <p className="text-2xl font-bold text-[#168B91] tabular-nums mt-1">
+            {model.payback_months} <span className="text-sm font-normal text-[#68776F]">Months</span>
           </p>
-          <span className="text-[11px] text-teal-700 font-semibold">
+          <span className="text-[11px] text-[#168B91] font-semibold">
             Under 1 crop cycle (DOC 100)
           </span>
         </div>
 
         {/* Annual ROI */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-subtle">
-          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="soft-card p-5">
+          <span className="text-xs font-bold text-[#68776F] uppercase tracking-wider block">
             Return on Investment (ROI)
           </span>
-          <p className="text-2xl font-black text-slate-900 mt-1">
+          <p className="text-2xl font-bold text-[#172820] tabular-nums mt-1">
             {model.roi_pct}%
           </p>
-          <span className="text-[11px] text-emerald-600 font-semibold">
+          <span className="text-[11px] text-[#21845A] font-semibold">
             High-yield commercial return
           </span>
         </div>
       </div>
 
       {/* Breakdown of Annual Financial Savings by Category */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-subtle space-y-4">
-        <h2 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100">
+      <div className="soft-card p-6 space-y-4">
+        <h2 className="text-base font-bold text-[#172820] pb-3 border-b border-[#E3EAE5]">
           Annual Economic Benefits Breakdown by Technology Layer
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Feed Savings */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-            <div className="flex items-center space-x-2 text-emerald-700 font-bold text-sm">
+          <div className="p-4 rounded-xl border border-[#E3EAE5] bg-[#F6F8F6] space-y-2">
+            <div className="flex items-center space-x-2 text-[#247653] font-bold text-sm">
               <UtensilsCrossed className="h-4 w-4" />
               <span>Smart Feed Optimization</span>
             </div>
-            <p className="text-xl font-black text-slate-900">
+            <p className="text-xl font-bold text-[#172820] tabular-nums">
               ₹{(model.feed_savings_inr / 100000).toFixed(2)} Lakhs
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#68776F] leading-relaxed">
               FCR reduction from {currentFcr} to {targetFcr} saves {(model.feed_saved_kg || 46875).toLocaleString()} kg of high-protein pellet.
             </p>
           </div>
 
           {/* Disease Mortality Protection */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-            <div className="flex items-center space-x-2 text-rose-700 font-bold text-sm">
+          <div className="p-4 rounded-xl border border-[#E3EAE5] bg-[#F6F8F6] space-y-2">
+            <div className="flex items-center space-x-2 text-[#C84040] font-bold text-sm">
               <Activity className="h-4 w-4" />
               <span>Disease Loss Prevention</span>
             </div>
-            <p className="text-xl font-black text-slate-900">
+            <p className="text-xl font-bold text-[#172820] tabular-nums">
               ₹{(model.disease_protection_inr / 100000).toFixed(2)} Lakhs
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#68776F] leading-relaxed">
               Early warning prevents devastating viral mortality crashes (WSSV / AHPND / Vibriosis).
             </p>
           </div>
 
           {/* Energy Optimization */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-            <div className="flex items-center space-x-2 text-amber-700 font-bold text-sm">
+          <div className="p-4 rounded-xl border border-[#E3EAE5] bg-[#F6F8F6] space-y-2">
+            <div className="flex items-center space-x-2 text-[#B7791F] font-bold text-sm">
               <Zap className="h-4 w-4" />
               <span>Automated Aeration Energy</span>
             </div>
-            <p className="text-xl font-black text-slate-900">
+            <p className="text-xl font-bold text-[#172820] tabular-nums">
               ₹{(model.energy_savings_inr / 100000).toFixed(2)} Lakhs
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#68776F] leading-relaxed">
               Smart DO hysteresis prevents unnecessary midday aerator running while maintaining oxygen saturation.
             </p>
           </div>
 
           {/* Labor Optimization */}
-          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-            <div className="flex items-center space-x-2 text-blue-700 font-bold text-sm">
+          <div className="p-4 rounded-xl border border-[#E3EAE5] bg-[#F6F8F6] space-y-2">
+            <div className="flex items-center space-x-2 text-[#3478B8] font-bold text-sm">
               <Users className="h-4 w-4" />
               <span>Labor Efficiency Gain</span>
             </div>
-            <p className="text-xl font-black text-slate-900">
+            <p className="text-xl font-bold text-[#172820] tabular-nums">
               ₹{(model.labor_savings_inr / 100000).toFixed(2)} Lakhs
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[#68776F] leading-relaxed">
               Automated feeding & remote IoT telemetry reduces manual check-tray and paddlewheel switching hours.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Interactive Assumptions Calculator (Requirement 24) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-subtle space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center space-x-2">
-            <Calculator className="h-5 w-5 text-teal-700" />
-            <h2 className="text-base font-black text-slate-900">
-              Interactive Financial Sensitivity Assumptions
-            </h2>
+      {/* Interactive Assumptions Calculator */}
+      <div className="soft-card p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-[#E3EAE5] gap-3">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 rounded-xl bg-[#E3F3E9] text-[#247653]">
+              <Calculator className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#172820]">
+                Interactive Financial Sensitivity Assumptions
+              </h2>
+              <p className="text-xs text-[#68776F]">Dynamically adjust operational variables to stress-test your farm economics</p>
+            </div>
           </div>
           <button
             onClick={handleRecalculate}
-            className="px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 text-white hover:bg-teal-800 shadow-sm transition-colors"
+            className="btn-primary text-xs py-2 px-4"
           >
             Update & Recalculate Model
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-bold text-slate-700">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs font-semibold text-[#172820]">
           <div>
-            <label className="block mb-1">Crops Per Year</label>
+            <label className="block mb-1 text-[#68776F]">Crops Per Year</label>
             <input
               type="number"
               step="0.1"
               value={annualCrops}
               onChange={(e) => setAnnualCrops(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-slate-300 font-bold"
+              className="soft-input w-full font-bold tabular-nums"
             />
           </div>
 
           <div>
-            <label className="block mb-1">Yield / Ha / Crop (kg)</label>
+            <label className="block mb-1 text-[#68776F]">Yield / Ha / Crop (kg)</label>
             <input
               type="number"
               step="100"
               value={yieldPerHa}
               onChange={(e) => setYieldPerHa(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-slate-300 font-bold"
+              className="soft-input w-full font-bold tabular-nums"
             />
           </div>
 
           <div>
-            <label className="block mb-1">Shrimp Sale Price (₹ / kg)</label>
+            <label className="block mb-1 text-[#68776F]">Shrimp Sale Price (₹ / kg)</label>
             <input
               type="number"
               value={shrimpPrice}
               onChange={(e) => setShrimpPrice(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-slate-300 font-bold"
+              className="soft-input w-full font-bold tabular-nums"
             />
           </div>
 
           <div>
-            <label className="block mb-1">Commercial Feed Price (₹ / kg)</label>
+            <label className="block mb-1 text-[#68776F]">Commercial Feed Price (₹ / kg)</label>
             <input
               type="number"
               value={feedPrice}
               onChange={(e) => setFeedPrice(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-slate-300 font-bold"
+              className="soft-input w-full font-bold tabular-nums"
             />
           </div>
 
           <div>
-            <label className="block mb-1">Current Baseline FCR</label>
+            <label className="block mb-1 text-[#68776F]">Current Baseline FCR</label>
             <input
               type="number"
               step="0.05"
               value={currentFcr}
               onChange={(e) => setCurrentFcr(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-slate-300 font-bold"
+              className="soft-input w-full font-bold tabular-nums"
             />
           </div>
 
           <div>
-            <label className="block mb-1">Target Smart FCR</label>
+            <label className="block mb-1 text-[#68776F]">Target Smart FCR</label>
             <input
               type="number"
               step="0.05"
               value={targetFcr}
               onChange={(e) => setTargetFcr(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-slate-300 font-bold text-teal-700"
+              className="soft-input w-full font-bold text-[#247653] tabular-nums"
             />
           </div>
 
           <div>
-            <label className="block mb-1">IoT CAPEX / Ha (₹)</label>
+            <label className="block mb-1 text-[#68776F]">IoT CAPEX / Ha (₹)</label>
             <input
               type="number"
               step="10000"
               value={iotCapexPerHa}
               onChange={(e) => setIotCapexPerHa(parseFloat(e.target.value))}
-              className="w-full p-2.5 rounded-lg border border-slate-300 font-bold"
+              className="soft-input w-full font-bold tabular-nums"
             />
           </div>
 
           <div className="flex items-end">
             <button
               onClick={handleRecalculate}
-              className="w-full py-2.5 rounded-lg bg-slate-900 text-white font-bold text-xs hover:bg-black"
+              className="btn-secondary w-full py-2.5 text-xs font-bold"
             >
               Apply Values
             </button>
           </div>
         </div>
       </div>
+
+      {loading && (
+        <div className="text-center py-2 text-xs text-[#68776F] flex items-center justify-center space-x-1">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-[#247653]" />
+          <span>Updating financial scenario matrix...</span>
+        </div>
+      )}
     </div>
   );
 };

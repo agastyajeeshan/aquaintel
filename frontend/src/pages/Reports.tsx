@@ -4,11 +4,7 @@ import {
   FileText,
   Download,
   Printer,
-  Calendar,
-  CheckCircle,
-  FileSpreadsheet,
-  Layers,
-  ArrowRight,
+  Loader2,
 } from "lucide-react";
 
 export const Reports: React.FC = () => {
@@ -55,10 +51,15 @@ export const Reports: React.FC = () => {
       {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Compliance & Operational Report Generation
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-[#E3F3E9] text-[#247653]">
+              <FileText className="h-5 w-5" />
+            </span>
+            <h1 className="text-2xl font-bold text-[#172820] tracking-tight">
+              Compliance & Operational Report Generation
+            </h1>
+          </div>
+          <p className="text-sm text-[#68776F] mt-1">
             Daily Summaries • Water Quality Logs • Feed Optimization • Energy Audits
           </p>
         </div>
@@ -66,7 +67,7 @@ export const Reports: React.FC = () => {
         <div className="flex items-center space-x-2">
           <button
             onClick={handlePrint}
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 shadow-subtle transition-colors"
+            className="btn-secondary text-xs flex items-center space-x-1.5 py-2 px-3.5"
           >
             <Printer className="h-4 w-4" />
             <span>Print Report View</span>
@@ -75,7 +76,7 @@ export const Reports: React.FC = () => {
           <a
             href="http://localhost:8000/api/reports/export-csv"
             download
-            className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-teal-700 text-white hover:bg-teal-800 shadow-sm transition-colors"
+            className="btn-primary text-xs flex items-center space-x-1.5 py-2 px-3.5"
           >
             <Download className="h-4 w-4" />
             <span>Export CSV Dataset</span>
@@ -96,10 +97,10 @@ export const Reports: React.FC = () => {
           <button
             key={r.id}
             onClick={() => setActiveReportType(r.id)}
-            className={`p-3 rounded-xl border text-xs font-bold transition-all text-center ${
+            className={`p-3 rounded-xl border text-xs font-semibold transition-all text-center ${
               activeReportType === r.id
-                ? "bg-teal-700 text-white border-teal-700 shadow-sm"
-                : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                ? "bg-[#247653] text-white border-[#247653] shadow-soft"
+                : "bg-white text-[#172820] border-[#E3EAE5] hover:bg-[#F6F8F6]"
             }`}
           >
             {r.label}
@@ -108,27 +109,27 @@ export const Reports: React.FC = () => {
       </div>
 
       {/* Generated Report Document Paper View */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-8 shadow-subtle space-y-6">
+      <div className="soft-card p-8 space-y-6">
         {/* Document Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-slate-200 gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-[#E3EAE5] gap-4">
           <div>
-            <span className="text-xs font-bold text-teal-700 tracking-wider uppercase block">
+            <span className="text-xs font-bold text-[#247653] tracking-wider uppercase block">
               OFFICIAL FARM OPERATING DOCUMENT
             </span>
-            <h2 className="text-xl font-black text-slate-900 mt-0.5">
+            <h2 className="text-xl font-bold text-[#172820] mt-0.5">
               {reportData?.title || "AquaIntel Daily Operational & Water Quality Summary"}
             </h2>
-            <p className="text-xs text-slate-500 font-medium">
+            <p className="text-xs text-[#68776F]">
               Estate: {reportData?.farm_name || "AquaIntel Delta Estate (10 Hectares, Nellore, AP)"}
             </p>
           </div>
 
-          <div className="text-left sm:text-right text-xs text-slate-500">
-            <p className="font-mono font-bold text-slate-800">
+          <div className="text-left sm:text-right text-xs text-[#68776F]">
+            <p className="font-mono font-bold text-[#172820]">
               DOC ID: {reportData?.report_id || "REP-DAILY-20261007"}
             </p>
-            <p>Generated: {reportData?.generated_at || "2026-10-07 18:30 IST"}</p>
-            <span className="inline-block mt-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+            <p className="tabular-nums">Generated: {reportData?.generated_at || "2026-10-07 18:30 IST"}</p>
+            <span className="badge-soft-success text-[10px] py-0.5 mt-1 inline-block">
               VERIFIED COMPLIANT
             </span>
           </div>
@@ -136,44 +137,44 @@ export const Reports: React.FC = () => {
 
         {/* Executive Summary Cards */}
         <div className="space-y-2">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <h3 className="text-xs font-bold text-[#68776F] uppercase tracking-wider">
             1. Executive Operational Summary
           </h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 block font-semibold">Total Ponds Monitored</span>
-              <span className="text-lg font-black text-slate-900">{exec.total_ponds} Ponds</span>
-              <span className="text-[10px] text-slate-500 block">8 Healthy • 1 Warning • 1 Critical</span>
+            <div className="p-3.5 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+              <span className="text-[#68776F] block font-semibold">Total Ponds Monitored</span>
+              <span className="text-lg font-bold text-[#172820] tabular-nums">{exec.total_ponds} Ponds</span>
+              <span className="text-[10px] text-[#68776F] block">8 Healthy • 1 Warning • 1 Critical</span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 block font-semibold">Active Standing Biomass</span>
-              <span className="text-lg font-black text-slate-900">{exec.total_biomass_kg.toLocaleString()} kg</span>
-              <span className="text-[10px] text-slate-500 block">Avg: 1,245 kg / Ha</span>
+            <div className="p-3.5 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+              <span className="text-[#68776F] block font-semibold">Active Standing Biomass</span>
+              <span className="text-lg font-bold text-[#172820] tabular-nums">{exec.total_biomass_kg.toLocaleString()} kg</span>
+              <span className="text-[10px] text-[#68776F] block tabular-nums">Avg: 1,245 kg / Ha</span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 block font-semibold">Nutritional Feed Dispensed</span>
-              <span className="text-lg font-black text-slate-900">{exec.feed_dispensed_today_kg} kg</span>
-              <span className="text-[10px] text-emerald-700 font-bold block">FCR: 1.24 (-0.41 vs avg)</span>
+            <div className="p-3.5 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+              <span className="text-[#68776F] block font-semibold">Nutritional Feed Dispensed</span>
+              <span className="text-lg font-bold text-[#172820] tabular-nums">{exec.feed_dispensed_today_kg} kg</span>
+              <span className="text-[10px] text-[#21845A] font-semibold block tabular-nums">FCR: 1.24 (-0.41 vs avg)</span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-400 block font-semibold">Electricity Consumption</span>
-              <span className="text-lg font-black text-slate-900">{exec.energy_consumed_kwh} kWh</span>
-              <span className="text-[10px] text-teal-700 font-bold block">₹{exec.estimated_daily_energy_cost_inr.toLocaleString()}</span>
+            <div className="p-3.5 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+              <span className="text-[#68776F] block font-semibold">Electricity Consumption</span>
+              <span className="text-lg font-bold text-[#172820] tabular-nums">{exec.energy_consumed_kwh} kWh</span>
+              <span className="text-[10px] text-[#168B91] font-semibold block tabular-nums">₹{exec.estimated_daily_energy_cost_inr.toLocaleString()}</span>
             </div>
           </div>
         </div>
 
         {/* Ponds Census Table */}
         <div className="space-y-2">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <h3 className="text-xs font-bold text-[#68776F] uppercase tracking-wider">
             2. Pond-by-Pond Biological Census
           </h3>
-          <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <div className="overflow-x-auto border border-[#E3EAE5] rounded-xl">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+              <thead className="bg-[#F6F8F6] text-[#68776F] font-semibold uppercase tracking-wider border-b border-[#E3EAE5]">
                 <tr>
                   <th className="py-2.5 px-3">Pond #</th>
                   <th className="py-2.5 px-3">DOC (Age)</th>
@@ -182,13 +183,13 @@ export const Reports: React.FC = () => {
                   <th className="py-2.5 px-3">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-slate-700">
+              <tbody className="divide-y divide-[#E3EAE5] text-[#172820]">
                 {ponds.map((p: any) => (
-                  <tr key={p.pond_number} className="hover:bg-slate-50/50">
-                    <td className="py-2.5 px-3 font-bold text-slate-900">Pond 0{p.pond_number}</td>
-                    <td className="py-2.5 px-3">{p.doc} Days</td>
-                    <td className="py-2.5 px-3 font-bold">{p.biomass_kg.toLocaleString()} kg</td>
-                    <td className="py-2.5 px-3 font-bold text-emerald-700">{p.survival_pct}%</td>
+                  <tr key={p.pond_number} className="hover:bg-[#F6F8F6]">
+                    <td className="py-2.5 px-3 font-bold text-[#172820]">Pond 0{p.pond_number}</td>
+                    <td className="py-2.5 px-3 tabular-nums">{p.doc} Days</td>
+                    <td className="py-2.5 px-3 font-bold tabular-nums">{p.biomass_kg.toLocaleString()} kg</td>
+                    <td className="py-2.5 px-3 font-bold text-[#21845A] tabular-nums">{p.survival_pct}%</td>
                     <td className="py-2.5 px-3">
                       <span className="font-bold text-xs">{p.status}</span>
                     </td>
@@ -201,17 +202,17 @@ export const Reports: React.FC = () => {
 
         {/* Active Alerts Appendix */}
         <div className="space-y-2">
-          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          <h3 className="text-xs font-bold text-[#68776F] uppercase tracking-wider">
             3. Active Environmental Alerts & Action Register
           </h3>
           <div className="space-y-2">
             {alerts.map((al: any, idx: number) => (
-              <div key={idx} className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-xs flex justify-between items-center">
+              <div key={idx} className="p-3 rounded-xl border border-[#E3EAE5] bg-[#F6F8F6] text-xs flex justify-between items-center">
                 <div>
-                  <span className="font-bold text-slate-900">{al.title}</span>
-                  <p className="text-[11px] text-slate-500 mt-0.5">Action: {al.recommended_action}</p>
+                  <span className="font-bold text-[#172820]">{al.title}</span>
+                  <p className="text-[11px] text-[#68776F] mt-0.5">Action: {al.recommended_action}</p>
                 </div>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">
+                <span className="badge-soft-danger text-[10px] py-0.5 font-bold">
                   {al.severity}
                 </span>
               </div>
@@ -220,17 +221,24 @@ export const Reports: React.FC = () => {
         </div>
 
         {/* Signatures */}
-        <div className="pt-8 border-t border-slate-200 grid grid-cols-2 text-xs text-slate-500">
+        <div className="pt-8 border-t border-[#E3EAE5] grid grid-cols-2 text-xs text-[#68776F]">
           <div>
-            <p className="font-bold text-slate-900">Dr. K. Srinivas</p>
+            <p className="font-bold text-[#172820]">Dr. K. Srinivas</p>
             <p>Chief Agritech Director • AquaIntel</p>
           </div>
           <div className="text-right">
-            <p className="font-bold text-slate-900">V. Naresh</p>
+            <p className="font-bold text-[#172820]">V. Naresh</p>
             <p>Farm Operations Manager • Delta Sector</p>
           </div>
         </div>
       </div>
+
+      {loading && (
+        <div className="text-center py-2 text-xs text-[#68776F] flex items-center justify-center space-x-1">
+          <Loader2 className="h-3.5 w-3.5 animate-spin text-[#247653]" />
+          <span>Generating compliance report documentation...</span>
+        </div>
+      )}
     </div>
   );
 };

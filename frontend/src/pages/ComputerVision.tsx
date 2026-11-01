@@ -4,12 +4,8 @@ import {
   Camera,
   Upload,
   Info,
-  CheckCircle,
-  AlertTriangle,
-  Play,
-  Eye,
   Crosshair,
-  Sparkles,
+  Loader2,
 } from "lucide-react";
 
 export const ComputerVision: React.FC = () => {
@@ -76,20 +72,25 @@ export const ComputerVision: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Title */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Computer Vision Visual Inspection
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-[#E3F3E9] text-[#247653]">
+              <Camera className="h-5 w-5" />
+            </span>
+            <h1 className="text-2xl font-bold text-[#172820] tracking-tight">
+              Computer Vision Visual Inspection
+            </h1>
+          </div>
+          <p className="text-sm text-[#68776F] mt-1">
             Automated Check-Tray Pellets & Benthic Swimming Activity Detection
           </p>
         </div>
 
-        <label className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 text-white hover:bg-teal-800 cursor-pointer shadow-sm transition-colors">
+        <label className="btn-primary text-xs flex items-center space-x-2 py-2 px-3.5 cursor-pointer">
           <Upload className="h-4 w-4" />
-          <span>Upload Pond Photo / Video</span>
+          <span>Upload Pond Imagery / Video</span>
           <input
             type="file"
             accept="image/*,video/*"
@@ -99,76 +100,79 @@ export const ComputerVision: React.FC = () => {
         </label>
       </div>
 
-      {/* Mandatory Disclaimer (Requirement 17) */}
-      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start space-x-3 shadow-subtle">
-        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <p className="font-bold">
+      {/* Mandatory Disclaimer */}
+      <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-950 text-xs flex items-start space-x-3 shadow-soft">
+        <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <p className="font-bold tracking-wide">
             COMPUTER VISION VALIDATION DISCLAIMER:
           </p>
-          <p className="text-amber-800 mt-0.5">
-            Computer vision provides <strong>preliminary observation only</strong>. Laboratory confirmation is required for disease diagnosis. Optical models evaluate tray clearing rates, pellet counts, and macro activity indicators.
+          <p className="text-amber-900 leading-relaxed">
+            Computer vision provides <strong>preliminary behavioral and physical observation only</strong>. Laboratory diagnostic assays are mandatory for pathogen identification. Optical models evaluate tray clearing rates, unconsumed pellet counts, and swimming vigor.
           </p>
         </div>
       </div>
 
       {/* Sample Cases for 1-Click Evaluation */}
       <div className="space-y-2">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-          Select Check-Tray Sample Case to Test:
+        <span className="text-xs font-bold text-[#68776F] uppercase tracking-wider block">
+          Select Check-Tray Sample Case:
         </span>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {samples.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => handleSelectSample(s)}
-              className={`p-3.5 rounded-xl border text-left transition-all ${
-                activeSample?.id === s.id && !uploadedFile
-                  ? "bg-teal-50/70 border-teal-500 ring-2 ring-teal-200 shadow-sm"
-                  : "bg-white border-slate-200 hover:bg-slate-50"
-              }`}
-            >
-              <div className="flex items-center justify-between text-xs font-bold mb-1">
-                <span className="text-slate-900">{s.title}</span>
-                <span
-                  className={`px-2 py-0.5 rounded text-[10px] ${
-                    s.metrics.activity === "LETHARGIC"
-                      ? "bg-rose-100 text-rose-800"
-                      : "bg-emerald-100 text-emerald-800"
-                  }`}
-                >
-                  {s.metrics.activity}
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 line-clamp-2">
-                {s.description}
-              </p>
-            </button>
-          ))}
+          {samples.map((s) => {
+            const isSelected = activeSample?.id === s.id && !uploadedFile;
+            return (
+              <button
+                key={s.id}
+                onClick={() => handleSelectSample(s)}
+                className={`p-3.5 rounded-xl border text-left transition-all ${
+                  isSelected
+                    ? "bg-[#E3F3E9]/50 border-[#247653] ring-1 ring-[#247653] shadow-soft"
+                    : "bg-white border-[#E3EAE5] hover:bg-[#F6F8F6]"
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold mb-1">
+                  <span className="text-[#172820]">{s.title}</span>
+                  <span
+                    className={`text-[10px] ${
+                      s.metrics.activity === "LETHARGIC"
+                        ? "badge-soft-danger"
+                        : "badge-soft-success"
+                    }`}
+                  >
+                    {s.metrics.activity}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#68776F] line-clamp-2">
+                  {s.description}
+                </p>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Main Analysis Display */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Interactive Simulated Inspection Frame */}
-        <div className="lg:col-span-7 bg-white rounded-2xl border border-slate-200 p-5 shadow-subtle space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="lg:col-span-7 soft-card p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#E3EAE5]">
             <div className="flex items-center space-x-2">
-              <Camera className="h-5 w-5 text-teal-700" />
-              <h2 className="text-sm font-bold text-slate-900">
+              <Camera className="h-4 w-4 text-[#247653]" />
+              <h2 className="text-sm font-bold text-[#172820]">
                 Visual Inspection Viewport (Simulated Optical Feed)
               </h2>
             </div>
-            <span className="text-xs font-mono text-slate-400">
-              Resolution: 640 x 480 px
+            <span className="text-xs font-mono text-[#68776F] tabular-nums">
+              Resolution: 640 × 480 px
             </span>
           </div>
 
           {/* Visual Canvas Representation */}
-          <div className="relative aspect-[4/3] bg-gradient-to-b from-teal-950 via-slate-900 to-teal-950 rounded-xl overflow-hidden border border-slate-700 flex items-center justify-center p-4 shadow-inner">
+          <div className="relative aspect-[4/3] bg-gradient-to-b from-[#11241C] via-[#172820] to-[#0E1E17] rounded-xl overflow-hidden border border-[#247653]/30 flex items-center justify-center p-4 shadow-inner">
             {/* Water Ripple & Check Tray Visual */}
-            <div className="absolute inset-4 rounded-full border-2 border-emerald-400/20 bg-teal-900/30 flex items-center justify-center">
-              <div className="w-48 h-48 rounded-full border border-dashed border-teal-300/30" />
+            <div className="absolute inset-4 rounded-full border-2 border-emerald-400/20 bg-[#168B91]/10 flex items-center justify-center">
+              <div className="w-48 h-48 rounded-full border border-dashed border-emerald-300/30" />
             </div>
 
             {/* Bounding Boxes Rendering */}
@@ -210,68 +214,69 @@ export const ComputerVision: React.FC = () => {
 
         {/* Right: Detected Categories & Metrics */}
         <div className="lg:col-span-5 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-subtle space-y-4">
-            <h3 className="text-sm font-bold text-slate-900 pb-2 border-b border-slate-100">
-              Detected Vision Categories
+          <div className="soft-card p-5 space-y-4">
+            <h3 className="text-sm font-bold text-[#172820] pb-2 border-b border-[#E3EAE5]">
+              Detected Optical Metrics
             </h3>
 
             {analyzing ? (
-              <div className="p-8 text-center text-xs text-slate-500">
-                Running computer vision contour detection & inference...
+              <div className="p-8 text-center text-xs text-[#68776F] flex flex-col items-center justify-center space-y-2">
+                <Loader2 className="h-5 w-5 animate-spin text-[#247653]" />
+                <span>Running computer vision contour detection & inference...</span>
               </div>
             ) : analysisResult ? (
               <div className="space-y-4">
                 {/* Metrics Grid */}
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block font-semibold">Active Shrimp Count</span>
-                    <span className="text-xl font-black text-slate-900">
+                  <div className="p-3 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+                    <span className="text-[#68776F] block font-semibold">Active Shrimp Count</span>
+                    <span className="text-xl font-bold text-[#172820] tabular-nums">
                       {analysisResult.shrimp_count}
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block font-semibold">Activity Vigor</span>
+                  <div className="p-3 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+                    <span className="text-[#68776F] block font-semibold">Activity Vigor</span>
                     <span
-                      className={`text-xl font-black ${
+                      className={`text-xl font-bold ${
                         analysisResult.activity_level === "LETHARGIC"
-                          ? "text-rose-600"
-                          : "text-emerald-700"
+                          ? "text-[#C84040]"
+                          : "text-[#21845A]"
                       }`}
                     >
                       {analysisResult.activity_level}
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block font-semibold">Residual Feed Pellets</span>
+                  <div className="p-3 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+                    <span className="text-[#68776F] block font-semibold">Residual Feed Pellets</span>
                     <span
-                      className={`text-xl font-black ${
+                      className={`text-xl font-bold tabular-nums ${
                         analysisResult.uneaten_feed_pellets > 15
-                          ? "text-rose-600"
-                          : "text-slate-900"
+                          ? "text-[#C84040]"
+                          : "text-[#172820]"
                       }`}
                     >
-                      {analysisResult.uneaten_feed_pellets} <span className="text-xs font-normal text-slate-500">pellets</span>
+                      {analysisResult.uneaten_feed_pellets} <span className="text-xs font-normal text-[#68776F]">pellets</span>
                     </span>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                    <span className="text-slate-400 block font-semibold">Tray Clearing %</span>
-                    <span className="text-xl font-black text-teal-700">
+                  <div className="p-3 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+                    <span className="text-[#68776F] block font-semibold">Tray Clearance Rate</span>
+                    <span className="text-xl font-bold text-[#247653] tabular-nums">
                       {analysisResult.tray_consumption_pct}%
                     </span>
                   </div>
                 </div>
 
                 {/* Dead Shrimp Count */}
-                <div className="p-3 rounded-xl border border-slate-100 bg-slate-50 flex justify-between items-center text-xs">
-                  <span className="font-bold text-slate-700">Dead / Moribund Shrimp Identified:</span>
+                <div className="p-3 rounded-xl border border-[#E3EAE5] bg-[#F6F8F6] flex justify-between items-center text-xs">
+                  <span className="font-bold text-[#172820]">Moribund / Dead Shrimp Identified:</span>
                   <span
-                    className={`font-black px-2 py-0.5 rounded ${
+                    className={`font-bold px-2 py-0.5 rounded text-xs tabular-nums ${
                       analysisResult.dead_shrimp_count > 0
-                        ? "bg-rose-100 text-rose-800"
-                        : "bg-emerald-100 text-emerald-800"
+                        ? "badge-soft-danger"
+                        : "badge-soft-success"
                     }`}
                   >
                     {analysisResult.dead_shrimp_count} Detected
@@ -279,9 +284,9 @@ export const ComputerVision: React.FC = () => {
                 </div>
 
                 {/* Summary Notes */}
-                <div className="p-3.5 rounded-xl border border-teal-200 bg-teal-50/50 text-xs text-teal-900 space-y-1">
-                  <span className="font-bold block">Observation Summary:</span>
-                  <p className="text-[11px] text-teal-800 leading-relaxed">
+                <div className="p-3.5 rounded-xl border border-[#E3EAE5] bg-[#EFF4F0] text-xs text-[#172820] space-y-1">
+                  <span className="font-bold block text-[#247653]">Observation Summary:</span>
+                  <p className="text-[11px] text-[#68776F] leading-relaxed">
                     {analysisResult.observation_summary}
                   </p>
                 </div>

@@ -1,15 +1,9 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
 import {
-  Layers,
   Building,
   Package,
   Users,
-  Anchor,
-  Compass,
-  CheckCircle,
-  Clock,
-  Sparkles,
 } from "lucide-react";
 
 export const FarmManagement: React.FC = () => {
@@ -35,71 +29,76 @@ export const FarmManagement: React.FC = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Commercial Farm Management & Asset Inventory
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-[#E3F3E9] text-[#247653]">
+              <Building className="h-5 w-5" />
+            </span>
+            <h1 className="text-2xl font-bold text-[#172820] tracking-tight">
+              Commercial Farm Management & Asset Inventory
+            </h1>
+          </div>
+          <p className="text-sm text-[#68776F] mt-1">
             Facility Profile • Stocking Batches • Feed Warehousing • Operating Personnel
           </p>
         </div>
 
-        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-teal-100 text-teal-800">
-          ISO 9001 / BAP Certified Standard
+        <span className="badge-soft-success text-xs font-semibold py-1 px-3">
+          ISO 9001 / BAP Certified Facility
         </span>
       </div>
 
       {/* Farm Profile Summary */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-subtle space-y-4">
-        <h2 className="text-base font-black text-slate-900 pb-3 border-b border-slate-100 flex items-center space-x-2">
-          <Building className="h-5 w-5 text-teal-700" />
+      <div className="soft-card p-6 space-y-4">
+        <h2 className="text-base font-bold text-[#172820] pb-3 border-b border-[#E3EAE5] flex items-center space-x-2">
+          <Building className="h-4 w-4 text-[#247653]" />
           <span>AquaIntel Commercial Delta Estate Profile</span>
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[10px]">
+          <div className="p-4 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+            <span className="font-bold text-[#68776F] block uppercase tracking-wider text-[10px]">
               Geographic Location
             </span>
-            <p className="font-bold text-slate-900 text-sm mt-1">
+            <p className="font-bold text-[#172820] text-sm mt-1">
               {overview?.location || "Nellore Coastal Belt, Andhra Pradesh, India"}
             </p>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">
+            <span className="text-[11px] text-[#68776F] mt-0.5 block font-mono">
               Coordinates: 14.4426° N, 79.9865° E
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[10px]">
-              Production Water Source
+          <div className="p-4 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+            <span className="font-bold text-[#68776F] block uppercase tracking-wider text-[10px]">
+              Water Sourcing Architecture
             </span>
-            <p className="font-bold text-slate-900 text-sm mt-1">
+            <p className="font-bold text-[#172820] text-sm mt-1">
               Brackish Estuarine + Marine Borewell
             </p>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">
+            <span className="text-[11px] text-[#68776F] mt-0.5 block tabular-nums">
               Salinity Range: 18 - 24 ppt
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[10px]">
+          <div className="p-4 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+            <span className="font-bold text-[#68776F] block uppercase tracking-wider text-[10px]">
               Active Culture Species
             </span>
-            <p className="font-bold text-slate-900 text-sm mt-1">
+            <p className="font-bold text-[#172820] text-sm mt-1">
               Litopenaeus vannamei (SPF Broodstock)
             </p>
-            <span className="text-[11px] text-slate-500 mt-0.5 block">
-              Density: 45 Post-Larvae (PL) / m²
+            <span className="text-[11px] text-[#68776F] mt-0.5 block tabular-nums">
+              Stocking: 45 Post-Larvae (PL) / m²
             </span>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[10px]">
+          <div className="p-4 rounded-xl bg-[#F6F8F6] border border-[#E3EAE5]">
+            <span className="font-bold text-[#68776F] block uppercase tracking-wider text-[10px]">
               Primary Power Architecture
             </span>
-            <p className="font-bold text-slate-900 text-sm mt-1">
+            <p className="font-bold text-[#172820] text-sm mt-1">
               125 kVA Silent DG + 40 kW Solar Grid
             </p>
-            <span className="text-[11px] text-teal-700 font-semibold mt-0.5 block">
+            <span className="text-[11px] text-[#247653] font-semibold mt-0.5 block">
               Automatic Transfer Switch (ATS)
             </span>
           </div>
@@ -107,22 +106,22 @@ export const FarmManagement: React.FC = () => {
       </div>
 
       {/* Feed & Probiotic Inventory */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-subtle">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="soft-card overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E3EAE5] flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Package className="h-5 w-5 text-emerald-700" />
-            <h3 className="text-sm font-bold text-slate-900">
+            <Package className="h-4 w-4 text-[#247653]" />
+            <h3 className="text-sm font-bold text-[#172820]">
               Warehouse Feed & Biosecurity Probiotics Inventory
             </h3>
           </div>
-          <span className="text-xs text-slate-500 font-semibold">
+          <span className="text-xs text-[#68776F]">
             Dry Storage Warehouse Bay 02
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+            <thead className="bg-[#F6F8F6] text-[#68776F] font-semibold uppercase tracking-wider border-b border-[#E3EAE5]">
               <tr>
                 <th className="py-3 px-4">Item & Formulation</th>
                 <th className="py-3 px-4">Brand / Supplier</th>
@@ -131,19 +130,19 @@ export const FarmManagement: React.FC = () => {
                 <th className="py-3 px-4">Inventory Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-[#E3EAE5] text-[#172820]">
               {inventory.map((inv, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/70">
-                  <td className="py-3 px-4 font-bold text-slate-900">{inv.item}</td>
-                  <td className="py-3 px-4">{inv.brand}</td>
-                  <td className="py-3 px-4 font-bold text-slate-900">{inv.stockKg.toLocaleString()} kg</td>
-                  <td className="py-3 px-4 font-semibold text-slate-700">{inv.daysSupply} Days</td>
-                  <td className="py-3 px-4">
+                <tr key={idx} className="hover:bg-[#F6F8F6] transition-colors">
+                  <td className="py-3.5 px-4 font-bold text-[#172820]">{inv.item}</td>
+                  <td className="py-3.5 px-4 text-[#68776F]">{inv.brand}</td>
+                  <td className="py-3.5 px-4 font-bold tabular-nums">{inv.stockKg.toLocaleString()} kg</td>
+                  <td className="py-3.5 px-4 tabular-nums">{inv.daysSupply} Days</td>
+                  <td className="py-3.5 px-4">
                     <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      className={`text-[10px] font-bold ${
                         inv.status === "LOW_STOCK"
-                          ? "bg-amber-100 text-amber-800"
-                          : "bg-emerald-100 text-emerald-800"
+                          ? "badge-soft-warning"
+                          : "badge-soft-success"
                       }`}
                     >
                       {inv.status === "LOW_STOCK" ? "REORDER REQUIRED" : "ADEQUATE"}
@@ -157,22 +156,22 @@ export const FarmManagement: React.FC = () => {
       </div>
 
       {/* Staff & Shift Roster */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-subtle">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <div className="soft-card overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E3EAE5] flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <Users className="h-5 w-5 text-teal-700" />
-            <h3 className="text-sm font-bold text-slate-900">
+            <Users className="h-4 w-4 text-[#247653]" />
+            <h3 className="text-sm font-bold text-[#172820]">
               Technical Staff & Field Operating Roster
             </h3>
           </div>
-          <span className="text-xs text-slate-500 font-semibold">
+          <span className="text-xs text-[#68776F]">
             24/7 Monitored Shifts
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+            <thead className="bg-[#F6F8F6] text-[#68776F] font-semibold uppercase tracking-wider border-b border-[#E3EAE5]">
               <tr>
                 <th className="py-3 px-4">Employee Name</th>
                 <th className="py-3 px-4">Designation</th>
@@ -181,15 +180,15 @@ export const FarmManagement: React.FC = () => {
                 <th className="py-3 px-4">System Role</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-[#E3EAE5] text-[#172820]">
               {employees.map((emp, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/70">
-                  <td className="py-3 px-4 font-bold text-slate-900">{emp.name}</td>
-                  <td className="py-3 px-4 font-medium">{emp.role}</td>
-                  <td className="py-3 px-4 font-mono text-slate-600">{emp.phone}</td>
-                  <td className="py-3 px-4">{emp.shift}</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-800">
+                <tr key={idx} className="hover:bg-[#F6F8F6] transition-colors">
+                  <td className="py-3.5 px-4 font-bold text-[#172820]">{emp.name}</td>
+                  <td className="py-3.5 px-4 text-[#68776F]">{emp.role}</td>
+                  <td className="py-3.5 px-4 font-mono text-[#68776F]">{emp.phone}</td>
+                  <td className="py-3.5 px-4 text-[#68776F]">{emp.shift}</td>
+                  <td className="py-3.5 px-4">
+                    <span className="badge-soft-info text-[10px] font-mono">
                       {emp.clearance}
                     </span>
                   </td>

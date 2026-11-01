@@ -3,20 +3,12 @@ import { useApp } from "../context/AppContext";
 import { api } from "../services/api";
 import {
   Microscope,
-  ShieldAlert,
-  AlertTriangle,
   Info,
   CheckCircle,
-  TrendingUp,
-  Sliders,
-  ChevronRight,
-  Flame,
-  Droplets,
   Database,
-  FileCheck,
   RefreshCw,
-  Activity,
-  FileSpreadsheet,
+  SlidersHorizontal,
+  FlaskConical,
 } from "lucide-react";
 
 export const DiseaseIntelligence: React.FC = () => {
@@ -103,53 +95,58 @@ export const DiseaseIntelligence: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Title */}
+      {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            AI-Based Disease Risk Intelligence & Biosecurity
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">
-            Multi-Pathogen Machine Learning & Environmental Vulnerability Decision Support
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-[#E3F3E9] text-[#247653]">
+              <Microscope className="h-5 w-5" />
+            </span>
+            <h1 className="text-2xl font-bold text-[#172820] tracking-tight">
+              Disease Risk Intelligence & Biosecurity
+            </h1>
+          </div>
+          <p className="text-sm text-[#68776F] mt-1">
+            Multi-Pathogen Predictive Risk Estimation & Environmental Vulnerability Assessment
           </p>
         </div>
 
-        <div className="flex items-center space-x-2">
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300">
-            ⚠️ MODEL NOT CLINICALLY VALIDATED
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="badge-soft-warning">
+            ⚠️ EXPERIMENTAL MODEL (SYNTHETIC)
           </span>
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">
+          <span className="badge-soft-info">
             WSSV • Vibriosis • EMS/AHPND • Black Gill
           </span>
         </div>
       </div>
 
-      {/* Mandatory Clinical & Scientific Notice */}
-      <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start space-x-3 shadow-subtle">
-        <Info className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-        <div>
-          <p className="font-bold">
-            IMPORTANT SCIENTIFIC & VETERINARY GOVERNANCE NOTICE:
+      {/* Mandatory Scientific & Veterinary Notice */}
+      <div className="p-4 rounded-xl bg-amber-50/70 border border-amber-200/80 text-amber-950 text-xs flex items-start space-x-3 shadow-soft">
+        <Info className="h-5 w-5 text-amber-700 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-bold tracking-wide">
+            VETERINARY GOVERNANCE & SCIENTIFIC SAFETY DISCLAIMER:
           </p>
-          <p className="text-amber-800 mt-0.5 leading-relaxed">
-            AquaIntel provides mathematical disease <strong>VULNERABILITY RISK ESTIMATION ONLY</strong> based on ambient water-quality stress, diurnal fluctuations, and feeding behavior. Water parameters alone <strong>cannot</strong> diagnose infection. Under Section 5 of the Master Specification, models trained on synthetic demo data are experimental and cannot be used for clinical diagnoses or chemical treatments. Laboratory RT-qPCR assays and pathology inspection by certified aquatic animal health specialists are mandatory.
+          <p className="text-amber-900 leading-relaxed">
+            AquaIntel provides mathematical disease <strong>vulnerability risk scoring</strong> based on ambient water-quality stressors (hypoxia, thermal shock, toxic ammonia) and behavioral feed response. Water parameters and computer vision alone <strong>cannot confirm pathogen infection</strong>. Models trained on synthetic baseline datasets are experimental and must not be used for chemical medication or culling decisions. Laboratory RT-qPCR assays and physical inspection by certified aquatic animal health professionals remain mandatory.
           </p>
         </div>
       </div>
 
-      {/* Dataset & Model Provenance Registry (Requirement 8) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-subtle space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-slate-100">
-          <div className="flex items-center space-x-2.5">
-            <div className="p-2 bg-teal-50 text-teal-700 rounded-xl">
+      {/* Dataset & Model Provenance Registry */}
+      <div className="soft-card p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#E3EAE5]">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-[#E3F3E9] text-[#247653]">
               <Database className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-base font-black text-slate-900">
-                Integrated Dataset & ML Model Provenance Registry
+              <h2 className="text-base font-bold text-[#172820]">
+                Dataset & ML Pipeline Provenance Registry
               </h2>
-              <p className="text-xs text-slate-500">
-                Source ZIP, raw schema validation audit, and pipeline training status
+              <p className="text-xs text-[#68776F]">
+                Offline ZIP archive ingestion, schema validation audit, and training provenance
               </p>
             </div>
           </div>
@@ -158,84 +155,90 @@ export const DiseaseIntelligence: React.FC = () => {
             <button
               onClick={handleRunValidation}
               disabled={validatingDataset}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white transition-all disabled:opacity-50"
+              className="btn-primary text-xs flex items-center space-x-1.5 py-1.5 px-3"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${validatingDataset ? "animate-spin" : ""}`} />
-              <span>{validatingDataset ? "Auditing Dataset..." : "Run Validation Audit"}</span>
+              <span>{validatingDataset ? "Auditing Pipeline..." : "Run Validation Audit"}</span>
             </button>
             <button
               onClick={() => setShowDataDetails(!showDataDetails)}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all"
+              className="btn-secondary text-xs py-1.5 px-3"
             >
-              {showDataDetails ? "Hide Schema Breakdown" : "View Class Breakdown"}
+              {showDataDetails ? "Hide Class Matrix" : "View Class Matrix"}
             </button>
           </div>
         </div>
 
         {/* Provenance KPI Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+          <div className="p-3 bg-[#F6F8F6] rounded-xl border border-[#E3EAE5]">
+            <span className="text-[11px] font-bold text-[#68776F] uppercase tracking-wider block">
               Discovered Archive
             </span>
-            <span className="text-xs font-mono font-bold text-slate-900 truncate block mt-0.5" title={datasetReport?.zip_archive_path || "AquaIntel_Prawn_Disease_Dataset_Starter_Pack.zip"}>
-              {datasetReport?.zip_archive_path || "Starter Pack ZIP"}
+            <span
+              className="text-xs font-mono font-semibold text-[#172820] truncate block mt-0.5"
+              title={datasetReport?.zip_archive_path || "AquaIntel_Prawn_Disease_Dataset_Starter_Pack.zip"}
+            >
+              {datasetReport?.zip_archive_path ? datasetReport.zip_archive_path.split("/").pop() : "Starter Pack ZIP"}
             </span>
-            <span className="text-[10px] text-teal-600 font-bold block mt-1">
-              Extracted to ai/data/disease/raw
+            <span className="text-[10px] text-[#247653] font-semibold block mt-1">
+              Extracted: ai/data/disease/raw
             </span>
           </div>
 
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+          <div className="p-3 bg-[#F6F8F6] rounded-xl border border-[#E3EAE5]">
+            <span className="text-[11px] font-bold text-[#68776F] uppercase tracking-wider block">
               Dataset Records
             </span>
-            <span className="text-lg font-black text-slate-900 block mt-0.5">
+            <span className="text-lg font-bold text-[#172820] tabular-nums block mt-0.5">
               {datasetReport?.total_rows_loaded || 1200} Rows
             </span>
-            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block mt-0.5">
+            <span className="badge-soft-warning text-[10px] py-0.5 mt-0.5 inline-block">
               {datasetReport?.provenance?.synthetic_rows || 1200} Synthetic Demo / 0 Real
             </span>
           </div>
 
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+          <div className="p-3 bg-[#F6F8F6] rounded-xl border border-[#E3EAE5]">
+            <span className="text-[11px] font-bold text-[#68776F] uppercase tracking-wider block">
               Active Pipeline Model
             </span>
-            <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">
+            <span className="text-xs font-bold text-[#172820] block mt-0.5 truncate">
               {modelStatus?.model_name || "Balanced Random Forest"}
             </span>
-            <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200 inline-block mt-0.5">
-              {modelStatus?.version || "1.0.0-synthetic"}
+            <span className="badge-soft-info text-[10px] py-0.5 mt-0.5 inline-block font-mono">
+              v{modelStatus?.version || "1.0.0-synthetic"}
             </span>
           </div>
 
-          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-              Validation Status
+          <div className="p-3 bg-[#F6F8F6] rounded-xl border border-[#E3EAE5]">
+            <span className="text-[11px] font-bold text-[#68776F] uppercase tracking-wider block">
+              Clinical Status
             </span>
-            <span className="text-xs font-black text-rose-700 block mt-0.5 truncate">
+            <span className="text-xs font-bold text-[#C84040] block mt-0.5 truncate">
               NOT VALIDATED
             </span>
-            <span className="text-[10px] text-slate-500 block mt-1">
-              Requires real lab PCR labels
+            <span className="text-[10px] text-[#68776F] block mt-1">
+              Requires certified field PCR tags
             </span>
           </div>
         </div>
 
         {/* Expandable Class Distribution & Missing Data Table */}
         {showDataDetails && datasetReport && (
-          <div className="pt-3 border-t border-slate-100 space-y-3">
+          <div className="pt-3 border-t border-[#E3EAE5] space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <span className="text-xs font-bold text-slate-700 block mb-2">
+                <span className="text-xs font-bold text-[#172820] block mb-2">
                   Dataset Class Distribution (Target Labels)
                 </span>
                 <div className="space-y-1.5 text-xs">
                   {Object.entries(datasetReport.class_distribution || {}).map(([cls, count]: any) => (
-                    <div key={cls} className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="font-mono font-bold text-slate-800">{cls}</span>
-                      <span className="text-slate-600">
+                    <div
+                      key={cls}
+                      className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-[#F6F8F6] border border-[#E3EAE5]"
+                    >
+                      <span className="font-mono font-semibold text-[#172820]">{cls}</span>
+                      <span className="text-[#68776F] tabular-nums">
                         {count} rows ({((count / datasetReport.total_rows_loaded) * 100).toFixed(1)}%)
                       </span>
                     </div>
@@ -244,15 +247,18 @@ export const DiseaseIntelligence: React.FC = () => {
               </div>
 
               <div>
-                <span className="text-xs font-bold text-slate-700 block mb-2">
-                  Data Quality & Preprocessing Imputation Audit
+                <span className="text-xs font-bold text-[#172820] block mb-2">
+                  Data Quality & Imputation Audit
                 </span>
                 <div className="space-y-1.5 text-xs">
                   {Object.entries(datasetReport.missing_values_by_column || {}).map(([col, stats]: any) => (
-                    <div key={col} className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-slate-50 border border-slate-100">
-                      <span className="font-mono text-slate-800">{col}</span>
-                      <span className="text-amber-700 font-bold">
-                        {stats.missing_count} missing ({stats.missing_pct}%) - Median Imputed
+                    <div
+                      key={col}
+                      className="flex justify-between items-center py-1 px-2.5 rounded-lg bg-[#F6F8F6] border border-[#E3EAE5]"
+                    >
+                      <span className="font-mono text-[#172820]">{col}</span>
+                      <span className="text-amber-800 font-semibold tabular-nums">
+                        {stats.missing_count} nulls ({stats.missing_pct}%) • Median Imputed
                       </span>
                     </div>
                   ))}
@@ -264,32 +270,37 @@ export const DiseaseIntelligence: React.FC = () => {
       </div>
 
       {/* Pond Selector */}
-      <div className="flex items-center space-x-2 overflow-x-auto pb-2">
-        <span className="text-xs font-bold text-slate-500 shrink-0">SELECT POND:</span>
-        {ponds.map((p) => (
-          <button
-            key={p.id}
-            onClick={() => setSelectedPondId(p.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-all ${
-              selectedPondId === p.id
-                ? "bg-teal-700 text-white shadow-sm"
-                : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            {p.name} {p.status === "RED" && "⚠️"}
-          </button>
-        ))}
+      <div className="flex items-center space-x-2 overflow-x-auto pb-1">
+        <span className="text-xs font-bold text-[#68776F] uppercase tracking-wider shrink-0 mr-1">
+          Select Pond:
+        </span>
+        {ponds.map((p) => {
+          const isSelected = selectedPondId === p.id;
+          return (
+            <button
+              key={p.id}
+              onClick={() => setSelectedPondId(p.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0 transition-all ${
+                isSelected
+                  ? "bg-[#247653] text-white shadow-soft"
+                  : "bg-white text-[#172820] border border-[#E3EAE5] hover:bg-[#EFF4F0]"
+              }`}
+            >
+              {p.name} {p.status === "RED" && "⚠️"}
+            </button>
+          );
+        })}
       </div>
 
       {/* Selected Pond Detailed Pathogen Breakdown */}
       {selectedPondRisk && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-black text-slate-900">
-              Pathogen Risk Profile for {selectedPondRisk.pond_name} (DOC {selectedPondRisk.doc})
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+            <h2 className="text-base font-bold text-[#172820]">
+              Pathogen Risk Breakdown for {selectedPondRisk.pond_name} (DOC {selectedPondRisk.doc})
             </h2>
-            <span className="text-xs font-medium text-slate-500">
-              Live DO: {selectedPondRisk.live_metrics.do} mg/L • Temp: {selectedPondRisk.live_metrics.temperature}°C • Ammonia: {selectedPondRisk.live_metrics.ammonia} mg/L
+            <span className="text-xs text-[#68776F] tabular-nums">
+              Telemetry Context: DO {selectedPondRisk.live_metrics.do} mg/L • Temp {selectedPondRisk.live_metrics.temperature}°C • Ammonia {selectedPondRisk.live_metrics.ammonia} mg/L
             </span>
           </div>
 
@@ -301,62 +312,62 @@ export const DiseaseIntelligence: React.FC = () => {
               return (
                 <div
                   key={idx}
-                  className={`bg-white rounded-2xl border p-5 shadow-subtle flex flex-col justify-between ${
+                  className={`soft-card p-5 flex flex-col justify-between transition-all ${
                     isHigh
-                      ? "border-rose-300 ring-2 ring-rose-100"
+                      ? "border-[#C84040]/40 ring-2 ring-red-100"
                       : isMed
                       ? "border-amber-300 ring-1 ring-amber-100"
-                      : "border-slate-200"
+                      : "border-[#E3EAE5]"
                   }`}
                 >
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-black text-slate-900">
+                      <span className="text-sm font-bold text-[#172820]">
                         {pred.disease_name}
                       </span>
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-black uppercase ${
+                        className={`text-xs font-bold tabular-nums ${
                           isHigh
-                            ? "bg-rose-100 text-rose-800"
+                            ? "badge-soft-danger"
                             : isMed
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-emerald-100 text-emerald-800"
+                            ? "badge-soft-warning"
+                            : "badge-soft-success"
                         }`}
                       >
                         {pred.risk_level} ({pred.risk_score}%)
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-mono">
-                      <span>Pathogen: {pred.pathogen}</span>
-                      <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                    <div className="flex items-center justify-between text-[11px] text-[#68776F]">
+                      <span className="font-mono">Pathogen: {pred.pathogen}</span>
+                      <span className="badge-soft-warning text-[10px] py-0.5">
                         SIMULATED RISK
                       </span>
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                    <div className="w-full bg-[#EFF4F0] rounded-full h-2 overflow-hidden">
                       <div
-                        className={`h-2.5 rounded-full transition-all duration-500 ${
+                        className={`h-2 rounded-full transition-all duration-500 ${
                           isHigh
-                            ? "bg-rose-600"
+                            ? "bg-[#C84040]"
                             : isMed
                             ? "bg-amber-500"
-                            : "bg-emerald-500"
+                            : "bg-[#21845A]"
                         }`}
                         style={{ width: `${pred.risk_score}%` }}
                       />
                     </div>
 
-                    {/* Why is the risk this score? */}
-                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 block">
-                        Contributing Environmental Stressors
+                    {/* Contributing Environmental Stressors */}
+                    <div className="space-y-1.5 pt-2 border-t border-[#E3EAE5]">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#68776F] block">
+                        Contributing Stress Factors
                       </span>
-                      <ul className="space-y-1 text-xs text-slate-700">
+                      <ul className="space-y-1 text-xs text-[#172820]">
                         {pred.explanations?.map((exp: string, eIdx: number) => (
                           <li key={eIdx} className="flex items-start space-x-1.5">
-                            <span className="text-teal-600 font-bold">•</span>
+                            <span className="text-[#247653] font-bold">•</span>
                             <span className="text-[11px] leading-snug">{exp}</span>
                           </li>
                         ))}
@@ -365,14 +376,14 @@ export const DiseaseIntelligence: React.FC = () => {
                   </div>
 
                   {/* Recommendations */}
-                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-1 bg-slate-50/50 p-2.5 rounded-xl">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
-                      Recommended Monitoring & Biosecurity
+                  <div className="mt-4 pt-3 border-t border-[#E3EAE5] space-y-1 bg-[#F6F8F6] p-3 rounded-xl">
+                    <span className="text-[10px] font-bold text-[#68776F] uppercase tracking-wider block">
+                      Recommended Preventive Protocol
                     </span>
-                    <ul className="text-xs text-slate-800 space-y-1">
+                    <ul className="text-xs text-[#172820] space-y-1">
                       {pred.recommendations?.map((rec: string, rIdx: number) => (
-                        <li key={rIdx} className="text-[11px] font-medium leading-snug flex items-center space-x-1">
-                          <CheckCircle className="h-3 w-3 text-emerald-600 shrink-0" />
+                        <li key={rIdx} className="text-[11px] leading-snug flex items-center space-x-1.5">
+                          <CheckCircle className="h-3 w-3 text-[#21845A] shrink-0" />
                           <span>{rec}</span>
                         </li>
                       ))}
@@ -386,18 +397,24 @@ export const DiseaseIntelligence: React.FC = () => {
       )}
 
       {/* Interactive Trained ML Model & Risk Engine Simulator */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-subtle space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-slate-100 gap-2">
-          <div>
-            <h2 className="text-base font-black text-slate-900">
-              Interactive ML Pipeline & Stressor Simulation Engine
-            </h2>
-            <p className="text-xs text-slate-500">
-              Simulates how ambient telemetry directly triggers the multi-pathogen ML pipeline
-            </p>
+      <div className="soft-card p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-3 border-b border-[#E3EAE5] gap-2">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-xl bg-[#E3F3E9] text-[#247653]">
+              <SlidersHorizontal className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-[#172820]">
+                Interactive ML Pipeline & Stressor Simulation
+              </h2>
+              <p className="text-xs text-[#68776F]">
+                Simulate how real-time water quality stress parameters trigger the multi-pathogen ML pipeline
+              </p>
+            </div>
           </div>
+
           <div className="flex items-center space-x-2">
-            <span className="text-xs font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+            <span className="badge-soft-info text-xs font-mono font-semibold">
               {simResult?.evaluation_type || "MACHINE_LEARNING_PIPELINE"}
             </span>
           </div>
@@ -409,8 +426,8 @@ export const DiseaseIntelligence: React.FC = () => {
             {/* DO Slider */}
             <div>
               <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-700">Dissolved Oxygen (DO):</span>
-                <span className="text-teal-700 font-mono">{simDO} mg/L</span>
+                <span className="text-[#172820]">Dissolved Oxygen (DO):</span>
+                <span className="text-[#247653] font-mono tabular-nums">{simDO.toFixed(1)} mg/L</span>
               </div>
               <input
                 type="range"
@@ -419,16 +436,16 @@ export const DiseaseIntelligence: React.FC = () => {
                 step="0.1"
                 value={simDO}
                 onChange={(e) => setSimDO(parseFloat(e.target.value))}
-                className="w-full accent-teal-600"
+                className="w-full accent-[#247653]"
               />
-              <span className="text-[10px] text-slate-400">Hypoxic stress below 3.5 mg/L</span>
+              <span className="text-[10px] text-[#68776F]">Hypoxic stress triggered below 3.5 mg/L</span>
             </div>
 
             {/* Temperature Slider */}
             <div>
               <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-700">Water Temperature:</span>
-                <span className="text-blue-700 font-mono">{simTemp} °C</span>
+                <span className="text-[#172820]">Water Temperature:</span>
+                <span className="text-[#168B91] font-mono tabular-nums">{simTemp.toFixed(1)} °C</span>
               </div>
               <input
                 type="range"
@@ -437,16 +454,16 @@ export const DiseaseIntelligence: React.FC = () => {
                 step="0.5"
                 value={simTemp}
                 onChange={(e) => setSimTemp(parseFloat(e.target.value))}
-                className="w-full accent-blue-600"
+                className="w-full accent-[#168B91]"
               />
-              <span className="text-[10px] text-slate-400">&lt; 26.5°C triggers WSSV; &gt; 31.5°C accelerates Vibrio</span>
+              <span className="text-[10px] text-[#68776F]">&lt; 26.5°C triggers WSSV; &gt; 31.5°C accelerates Vibrio</span>
             </div>
 
             {/* Ammonia Slider */}
             <div>
               <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-700">Total Ammonia Nitrogen (TAN):</span>
-                <span className="text-rose-700 font-mono">{simAmmonia} mg/L</span>
+                <span className="text-[#172820]">Total Ammonia Nitrogen (TAN):</span>
+                <span className="text-[#C84040] font-mono tabular-nums">{simAmmonia.toFixed(2)} mg/L</span>
               </div>
               <input
                 type="range"
@@ -455,16 +472,16 @@ export const DiseaseIntelligence: React.FC = () => {
                 step="0.01"
                 value={simAmmonia}
                 onChange={(e) => setSimAmmonia(parseFloat(e.target.value))}
-                className="w-full accent-rose-600"
+                className="w-full accent-[#C84040]"
               />
-              <span className="text-[10px] text-slate-400">Toxic &gt; 0.10 mg/L</span>
+              <span className="text-[10px] text-[#68776F]">Sub-lethal toxicity threshold &gt; 0.10 mg/L</span>
             </div>
 
             {/* Mortality Count Slider */}
             <div>
               <div className="flex justify-between text-xs font-bold mb-1">
-                <span className="text-slate-700">24h Observed Mortality Count:</span>
-                <span className="text-rose-600 font-mono">{simMortality} dead shrimp</span>
+                <span className="text-[#172820]">24h Observed Mortality Count:</span>
+                <span className="text-[#C84040] font-mono tabular-nums">{simMortality} dead shrimp</span>
               </div>
               <input
                 type="range"
@@ -473,24 +490,24 @@ export const DiseaseIntelligence: React.FC = () => {
                 step="1"
                 value={simMortality}
                 onChange={(e) => setSimMortality(parseInt(e.target.value))}
-                className="w-full accent-rose-600"
+                className="w-full accent-[#C84040]"
               />
             </div>
 
             {/* Feeding Response Selector */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                OBSERVED FEEDING RESPONSE
+              <label className="block text-xs font-bold text-[#172820] mb-1.5 uppercase tracking-wide">
+                Observed Feeding Response
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {["NORMAL", "REDUCED", "ABNORMAL"].map((resp) => (
                   <button
                     key={resp}
                     onClick={() => setSimFeedResp(resp)}
-                    className={`py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                    className={`py-1.5 text-xs font-semibold rounded-lg border transition-all ${
                       simFeedResp === resp
-                        ? "bg-teal-700 text-white border-teal-700 shadow-sm"
-                        : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                        ? "bg-[#247653] text-white border-[#247653] shadow-soft"
+                        : "bg-[#F6F8F6] text-[#172820] border-[#E3EAE5] hover:bg-[#EFF4F0]"
                     }`}
                   >
                     {resp}
@@ -502,54 +519,54 @@ export const DiseaseIntelligence: React.FC = () => {
 
           {/* Live Calculated Output */}
           {simResult && (
-            <div className="bg-slate-50/70 rounded-xl p-5 border border-slate-200 flex flex-col justify-between space-y-4">
+            <div className="bg-[#F6F8F6] rounded-xl p-5 border border-[#E3EAE5] flex flex-col justify-between space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                      Top ML Predicted Condition
+                    <span className="text-xs font-bold text-[#68776F] uppercase tracking-wider block">
+                      ML Predicted Condition
                     </span>
-                    <h3 className="text-xl font-black text-slate-900">
+                    <h3 className="text-xl font-bold text-[#172820]">
                       {simResult.top_predicted_condition}
                     </h3>
                   </div>
                   <div className="text-right">
-                    <span className="text-3xl font-black text-slate-900">
+                    <span className="text-3xl font-extrabold text-[#172820] tabular-nums">
                       {simResult.confidence_score}%
                     </span>
-                    <span className="text-xs text-slate-500 block">Probability Confidence</span>
+                    <span className="text-xs text-[#68776F] block">Confidence Score</span>
                   </div>
                 </div>
 
                 <div
-                  className={`p-2.5 rounded-xl border text-center font-black text-xs uppercase tracking-wider ${
+                  className={`p-2 rounded-xl border text-center font-bold text-xs uppercase tracking-wider ${
                     simResult.risk_category === "HIGH" || simResult.risk_category === "CRITICAL"
-                      ? "bg-rose-100 text-rose-800 border-rose-300"
+                      ? "badge-soft-danger block"
                       : simResult.risk_category === "MEDIUM"
-                      ? "bg-amber-100 text-amber-800 border-amber-300"
-                      : "bg-emerald-100 text-emerald-800 border-emerald-300"
+                      ? "badge-soft-warning block"
+                      : "badge-soft-success block"
                   }`}
                 >
                   CLASSIFICATION: {simResult.risk_category} RISK LEVEL
                 </div>
 
-                {/* Pathogen Probability Distribution (7 Classes) */}
+                {/* Pathogen Probability Distribution */}
                 {simResult.pathogen_probability_distribution && (
-                  <div className="space-y-1 pt-1">
-                    <span className="text-[11px] font-bold text-slate-600 block">
+                  <div className="space-y-1.5 pt-1">
+                    <span className="text-[11px] font-bold text-[#172820] block">
                       Multi-Class Probability Distribution:
                     </span>
                     <div className="space-y-1">
                       {Object.entries(simResult.pathogen_probability_distribution).map(([pat, prob]: any) => (
                         <div key={pat} className="flex items-center text-xs">
-                          <span className="w-28 text-slate-600 font-mono text-[11px] truncate">{pat}:</span>
-                          <div className="flex-1 bg-slate-200 rounded-full h-1.5 overflow-hidden mx-2">
+                          <span className="w-28 text-[#68776F] font-mono text-[11px] truncate">{pat}:</span>
+                          <div className="flex-1 bg-[#EFF4F0] rounded-full h-1.5 overflow-hidden mx-2">
                             <div
-                              className="bg-teal-600 h-1.5 rounded-full"
+                              className="bg-[#247653] h-1.5 rounded-full"
                               style={{ width: `${prob * 100}%` }}
                             />
                           </div>
-                          <span className="text-[11px] font-mono font-bold text-slate-800 w-12 text-right">
+                          <span className="text-[11px] font-mono font-semibold text-[#172820] w-12 text-right tabular-nums">
                             {(prob * 100).toFixed(1)}%
                           </span>
                         </div>
@@ -559,14 +576,14 @@ export const DiseaseIntelligence: React.FC = () => {
                 )}
 
                 {/* Contributing Stressors */}
-                <div className="space-y-1 pt-2 border-t border-slate-200">
-                  <span className="text-[11px] font-bold text-slate-700 block">
+                <div className="space-y-1 pt-2 border-t border-[#E3EAE5]">
+                  <span className="text-[11px] font-bold text-[#172820] block">
                     Contributing Factors:
                   </span>
-                  <ul className="space-y-1 text-xs text-slate-600">
+                  <ul className="space-y-1 text-xs text-[#68776F]">
                     {simResult.contributing_stressors?.map((st: string, idx: number) => (
                       <li key={idx} className="flex items-start space-x-1.5 text-[11px]">
-                        <span className="text-teal-600 font-bold">•</span>
+                        <span className="text-[#247653] font-bold">•</span>
                         <span>{st}</span>
                       </li>
                     ))}
@@ -574,13 +591,21 @@ export const DiseaseIntelligence: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-slate-200 text-[10px] text-slate-400">
-                Model: {simResult.model_id} ({simResult.validation_status})
+              <div className="pt-2 border-t border-[#E3EAE5] text-[10px] text-[#68776F] flex items-center justify-between">
+                <span>Model: {simResult.model_id}</span>
+                <span className="font-mono text-amber-700 font-semibold">{simResult.validation_status}</span>
               </div>
             </div>
           )}
         </div>
       </div>
+      {/* Footer loading indicator */}
+      {loading && (
+        <div className="text-center py-2 text-xs text-[#68776F] flex items-center justify-center space-x-1">
+          <FlaskConical className="h-3.5 w-3.5 animate-pulse text-[#247653]" />
+          <span>Synchronizing pathogen registry...</span>
+        </div>
+      )}
     </div>
   );
 };
