@@ -2,12 +2,7 @@ import React, { useState } from "react";
 import {
   Wrench,
   CheckCircle,
-  Clock,
-  AlertTriangle,
   Plus,
-  Calendar,
-  Toolbox,
-  DollarSign,
 } from "lucide-react";
 
 export const Maintenance: React.FC = () => {
@@ -81,10 +76,15 @@ export const Maintenance: React.FC = () => {
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
-            Equipment Asset Maintenance & Service Logs
-          </h1>
-          <p className="text-sm text-slate-500 font-medium">
+          <div className="flex items-center space-x-2">
+            <span className="p-1.5 rounded-lg bg-[#E3F3E9] text-[#247653]">
+              <Wrench className="h-5 w-5" />
+            </span>
+            <h1 className="text-2xl font-bold text-[#172820] tracking-tight">
+              Equipment Asset Maintenance & Service Logs
+            </h1>
+          </div>
+          <p className="text-sm text-[#68776F] mt-1">
             Aerator Gearboxes • Optical Sensor Calibrations • Backup Power Systems
           </p>
         </div>
@@ -110,7 +110,7 @@ export const Maintenance: React.FC = () => {
             setMsg("New preventive maintenance service logged.");
             setTimeout(() => setMsg(""), 3000);
           }}
-          className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 text-white hover:bg-teal-800 shadow-sm transition-colors"
+          className="btn-primary text-xs flex items-center space-x-2 py-2 px-3.5"
         >
           <Plus className="h-4 w-4" />
           <span>Log Maintenance Task</span>
@@ -118,69 +118,69 @@ export const Maintenance: React.FC = () => {
       </div>
 
       {msg && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center space-x-2 shadow-subtle animate-pulse">
-          <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs font-semibold flex items-center space-x-2 shadow-soft">
+          <CheckCircle className="h-4 w-4 text-[#21845A] shrink-0" />
           <span>{msg}</span>
         </div>
       )}
 
       {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-subtle">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="soft-card p-4">
+          <span className="text-[11px] font-bold text-[#68776F] uppercase tracking-wider block">
             Scheduled Tasks
           </span>
-          <p className="text-2xl font-black text-slate-900 mt-1">
+          <p className="text-2xl font-bold text-[#172820] tabular-nums mt-1">
             {records.filter((r) => r.status === "PENDING").length}
           </p>
-          <span className="text-[10px] text-slate-500">Upcoming this fortnight</span>
+          <span className="text-[10px] text-[#68776F]">Upcoming this fortnight</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-rose-200 bg-rose-50/20 shadow-subtle">
-          <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider block">
+        <div className="soft-card p-4 bg-red-50/20 border-red-200/50">
+          <span className="text-[11px] font-bold text-[#C84040] uppercase tracking-wider block">
             High Priority
           </span>
-          <p className="text-2xl font-black text-rose-700 mt-1">
+          <p className="text-2xl font-bold text-[#C84040] tabular-nums mt-1">
             {records.filter((r) => r.priority === "HIGH" && r.status === "PENDING").length}
           </p>
-          <span className="text-[10px] text-rose-600 font-semibold">Sensor Calibration Due</span>
+          <span className="text-[10px] text-[#C84040] font-semibold">Sensor Calibration Due</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-subtle">
-          <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider block">
+        <div className="soft-card p-4 bg-[#E3F3E9]/30 border-[#247653]/30">
+          <span className="text-[11px] font-bold text-[#247653] uppercase tracking-wider block">
             Completed (Month)
           </span>
-          <p className="text-2xl font-black text-emerald-700 mt-1">
+          <p className="text-2xl font-bold text-[#21845A] tabular-nums mt-1">
             {records.filter((r) => r.status === "COMPLETED").length}
           </p>
-          <span className="text-[10px] text-emerald-600 font-semibold">100% On-Time Resolution</span>
+          <span className="text-[10px] text-[#21845A] font-semibold">100% On-Time Resolution</span>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-subtle">
-          <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
+        <div className="soft-card p-4">
+          <span className="text-[11px] font-bold text-[#68776F] uppercase tracking-wider block">
             Maint. Expenditure
           </span>
-          <p className="text-2xl font-black text-slate-900 mt-1">
+          <p className="text-2xl font-bold text-[#172820] tabular-nums mt-1">
             ₹{records.reduce((acc, r) => acc + r.cost_inr, 0).toLocaleString()}
           </p>
-          <span className="text-[10px] text-slate-500">Under Monthly Budget</span>
+          <span className="text-[10px] text-[#21845A] font-semibold">Under Monthly Budget</span>
         </div>
       </div>
 
       {/* Maintenance Tasks Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-subtle">
-        <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-900">
+      <div className="soft-card overflow-hidden">
+        <div className="px-6 py-4 border-b border-[#E3EAE5] flex items-center justify-between">
+          <h2 className="text-sm font-bold text-[#172820]">
             Work Orders & Calibration Schedule
           </h2>
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-[#68776F]">
             Next Critical: Optical DO Membrane (Pond 08)
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+            <thead className="bg-[#F6F8F6] text-[#68776F] font-semibold uppercase tracking-wider border-b border-[#E3EAE5]">
               <tr>
                 <th className="py-3 px-4">Equipment & Code</th>
                 <th className="py-3 px-4">Task Description</th>
@@ -192,43 +192,43 @@ export const Maintenance: React.FC = () => {
                 <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-[#E3EAE5] text-[#172820]">
               {records.map((r) => {
                 const isPending = r.status === "PENDING";
                 const isHigh = r.priority === "HIGH";
 
                 return (
-                  <tr key={r.id} className="hover:bg-slate-50/70">
+                  <tr key={r.id} className="hover:bg-[#F6F8F6] transition-colors">
                     <td className="py-3.5 px-4">
-                      <span className="font-bold text-slate-900 block">{r.equipment_type}</span>
-                      <span className="text-[10px] font-mono text-slate-400">{r.equipment_code} {r.pond_id ? `(Pond 0${r.pond_id})` : ""}</span>
+                      <span className="font-bold text-[#172820] block">{r.equipment_type}</span>
+                      <span className="text-[10px] font-mono text-[#68776F]">{r.equipment_code} {r.pond_id ? `(Pond 0${r.pond_id})` : ""}</span>
                     </td>
-                    <td className="py-3.5 px-4 font-medium max-w-xs">
-                      <span className="font-bold text-slate-800 block">{r.title}</span>
-                      <span className="text-[11px] text-slate-500">{r.notes}</span>
+                    <td className="py-3.5 px-4 max-w-xs">
+                      <span className="font-semibold text-[#172820] block">{r.title}</span>
+                      <span className="text-[11px] text-[#68776F]">{r.notes}</span>
                     </td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`text-[10px] font-bold ${
                           isHigh
-                            ? "bg-rose-100 text-rose-800"
+                            ? "badge-soft-danger"
                             : r.priority === "MEDIUM"
-                            ? "bg-amber-100 text-amber-800"
-                            : "bg-slate-100 text-slate-700"
+                            ? "badge-soft-warning"
+                            : "badge-soft-info"
                         }`}
                       >
                         {r.priority}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 font-medium">{r.scheduled_date}</td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800">{r.technician}</td>
-                    <td className="py-3.5 px-4 font-mono font-bold">₹{r.cost_inr}</td>
+                    <td className="py-3.5 px-4 tabular-nums text-[#68776F]">{r.scheduled_date}</td>
+                    <td className="py-3.5 px-4 font-semibold text-[#172820]">{r.technician}</td>
+                    <td className="py-3.5 px-4 font-mono font-bold tabular-nums">₹{r.cost_inr}</td>
                     <td className="py-3.5 px-4">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        className={`text-[10px] font-bold ${
                           r.status === "COMPLETED"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : "bg-amber-100 text-amber-800"
+                            ? "badge-soft-success"
+                            : "badge-soft-warning"
                         }`}
                       >
                         {r.status}
@@ -238,13 +238,14 @@ export const Maintenance: React.FC = () => {
                       {isPending ? (
                         <button
                           onClick={() => handleMarkComplete(r.id)}
-                          className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition-colors"
+                          className="btn-primary text-[11px] py-1 px-2.5"
                         >
                           Complete
                         </button>
                       ) : (
-                        <span className="text-emerald-700 font-bold text-[11px]">
-                          ✓ Signed Off
+                        <span className="text-[#21845A] font-semibold text-[11px] flex items-center justify-end space-x-1">
+                          <CheckCircle className="h-3 w-3" />
+                          <span>Signed Off</span>
                         </span>
                       )}
                     </td>
