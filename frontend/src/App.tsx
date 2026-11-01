@@ -23,6 +23,7 @@ import { Reports } from "./pages/Reports";
 import { Settings } from "./pages/Settings";
 import { Auth } from "./pages/Auth";
 import { ClimateAdaptation } from "./pages/ClimateAdaptation";
+import { AutonomousEngine } from "./pages/AutonomousEngine";
 
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
@@ -36,6 +37,7 @@ const MainContent: React.FC = () => {
 
         <main className="flex-1 p-5 md:p-7 lg:p-8 overflow-y-auto">
           {activePage === "dashboard" && <Dashboard />}
+          {activePage === "autonomous" && <AutonomousEngine />}
           {activePage === "ponds" && <Ponds />}
           {activePage === "pond-detail" && <PondDetail />}
           {activePage === "water-quality" && <WaterQuality />}

@@ -19,6 +19,7 @@ import {
   Settings,
   CloudSun,
   ShieldAlert,
+  Bot,
 } from "lucide-react";
 
 interface NavGroup {
@@ -42,6 +43,7 @@ const navGroups: NavGroup[] = [
   {
     category: "INTELLIGENCE",
     items: [
+      { id: "autonomous", label: "Autonomous Engine", icon: Bot, badge: "AUTO" },
       { id: "water-quality", label: "Water Quality", icon: Activity },
       { id: "climate", label: "Climate Adaptation", icon: CloudSun, badge: "AI" },
       { id: "feeding", label: "Smart Feeding", icon: UtensilsCrossed },

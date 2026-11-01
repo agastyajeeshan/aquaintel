@@ -143,5 +143,44 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ scenario, custom_parameters }),
     }),
+
+  // Fully Autonomous Intelligent Farm Management Engine
+  getAutonomousStatus: () => fetchJson("/autonomous/status"),
+  setAutonomousMode: (mode: string, operator_name?: string, reason?: string) =>
+    fetchJson("/autonomous/mode", {
+      method: "POST",
+      body: JSON.stringify({ mode, operator_name, reason }),
+    }),
+  getAutonomousDecisions: (pond_id?: number, limit: number = 50) =>
+    fetchJson(`/autonomous/decisions?limit=${limit}${pond_id ? `&pond_id=${pond_id}` : ""}`),
+  getAutonomousActions: (pond_id?: number, limit: number = 50) =>
+    fetchJson(`/autonomous/actions?limit=${limit}${pond_id ? `&pond_id=${pond_id}` : ""}`),
+  triggerAutonomousEvaluate: (pond_id?: number) =>
+    fetchJson("/autonomous/evaluate", {
+      method: "POST",
+      body: JSON.stringify({ pond_id }),
+    }),
+  manualAutonomousOverride: (action: string, pond_id?: number, operator_name?: string) =>
+    fetchJson("/autonomous/override", {
+      method: "POST",
+      body: JSON.stringify({ action, pond_id, operator_name }),
+    }),
+  getAutonomousSafetyConfig: () => fetchJson("/autonomous/safety-config"),
+  updateAutonomousSafetyConfig: (config: any) =>
+    fetchJson("/autonomous/safety-config", {
+      method: "PUT",
+      body: JSON.stringify(config),
+    }),
+  getAutonomousNotifications: (pond_id?: number, limit: number = 50) =>
+    fetchJson(`/autonomous/notifications?limit=${limit}${pond_id ? `&pond_id=${pond_id}` : ""}`),
+  simulateAutonomousScenario: (scenario: string, pond_id: number = 4) =>
+    fetchJson("/autonomous/simulate-scenario", {
+      method: "POST",
+      body: JSON.stringify({ scenario, pond_id }),
+    }),
+  verifyAutonomousAction: (action_id: string) =>
+    fetchJson(`/autonomous/verify-action/${action_id}`, {
+      method: "POST",
+    }),
 };
 

@@ -20,6 +20,7 @@ export type PageId =
   | "reports"
   | "settings"
   | "climate"
+  | "autonomous"
   | "auth";
 
 
