@@ -3,42 +3,214 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --farm-bg: #F6F8F6;
+    --farm-surface: #FFFFFF;
+    --farm-secondary: #EFF4F0;
+    --farm-mint: #E3F3E9;
+    --farm-border: #E3EAE5;
+    --farm-text: #172820;
+    --farm-muted: #68776F;
+    --forest: #247653;
+    --forest-dark: #174D39;
+    --teal-marine: #168B91;
+  }
+
   body {
-    @apply bg-slate-50 text-slate-900 antialiased font-sans;
-    background-color: #f8fafc;
-    color: #0f172a;
+    background-color: #F6F8F6;
+    color: #172820;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Tabular numbers for clean numeric sensor readouts */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Custom Aquaculture Light Theme utility styles */
-.badge-healthy {
-  @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
+/* ==============================================================================
+   AquaIntel Clean Soft-UI Component Utilities
+   ============================================================================== */
+
+/* Base Soft Cards */
+.soft-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E3EAE5;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(30, 60, 45, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.badge-warning {
-  @apply bg-amber-50 text-amber-700 border border-amber-200;
+.soft-card:hover {
+  box-shadow: 0 5px 16px rgba(30, 60, 45, 0.06);
 }
 
-.badge-high-risk {
-  @apply bg-orange-50 text-orange-700 border border-orange-200;
+.soft-card-elevated {
+  background-color: #FFFFFF;
+  border: 1px solid #E3EAE5;
+  border-radius: 18px;
+  box-shadow: 0 5px 16px rgba(30, 60, 45, 0.06);
 }
 
-.badge-critical {
-  @apply bg-rose-50 text-rose-700 border border-rose-200;
+.soft-card-secondary {
+  background-color: #EFF4F0;
+  border: 1px solid #E3EAE5;
+  border-radius: 14px;
 }
 
-/* Sleek subtle scrollbars */
+.soft-card-mint {
+  background-color: #E3F3E9;
+  border: 1px solid #C6E7D2;
+  border-radius: 14px;
+}
+
+/* Subtle Soft Inputs */
+.soft-input {
+  background-color: #FFFFFF;
+  border: 1px solid #E3EAE5;
+  border-radius: 12px;
+  color: #172820;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  transition: all 0.15s ease-in-out;
+}
+
+.soft-input:focus {
+  outline: none;
+  border-color: #247653;
+  box-shadow: 0 0 0 3px rgba(36, 118, 83, 0.12);
+}
+
+/* Action Buttons */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #247653;
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  box-shadow: 0 2px 8px rgba(36, 118, 83, 0.18);
+  transition: all 0.18s ease-in-out;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background-color: #174D39;
+  box-shadow: 0 4px 12px rgba(36, 118, 83, 0.28);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #FFFFFF;
+  color: #172820;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 12px;
+  border: 1px solid #E3EAE5;
+  box-shadow: 0 1px 3px rgba(30, 60, 45, 0.03);
+  transition: all 0.18s ease-in-out;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background-color: #EFF4F0;
+  border-color: #D3DDD6;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.btn-teal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #168B91;
+  color: #FFFFFF;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  box-shadow: 0 2px 8px rgba(22, 139, 145, 0.18);
+  transition: all 0.18s ease-in-out;
+  cursor: pointer;
+}
+
+.btn-teal:hover {
+  background-color: #0E6368;
+}
+
+/* Semantic Badges */
+.badge-healthy,
+.badge-soft-success {
+  background-color: #EAF6EE;
+  color: #21845A;
+  border: 1px solid #C6E7D2;
+  font-weight: 600;
+}
+
+.badge-warning,
+.badge-soft-warning {
+  background-color: #FEF7EC;
+  color: #B7791F;
+  border: 1px solid #F6DFB3;
+  font-weight: 600;
+}
+
+.badge-high-risk,
+.badge-critical,
+.badge-soft-critical {
+  background-color: #FDF2F2;
+  color: #C84040;
+  border: 1px solid #F7C8C8;
+  font-weight: 600;
+}
+
+.badge-info,
+.badge-soft-info {
+  background-color: #EFF6FB;
+  color: #3478B8;
+  border: 1px solid #C3DCF1;
+  font-weight: 600;
+}
+
+.badge-neutral {
+  background-color: #EFF4F0;
+  color: #68776F;
+  border: 1px solid #E3EAE5;
+  font-weight: 600;
+}
+
+/* Custom Sleek Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #F6F8F6;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #D3DDD6;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #B5C4B9;
 }
+
