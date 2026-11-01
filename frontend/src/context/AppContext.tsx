@@ -19,7 +19,8 @@ export type PageId =
   | "maintenance"
   | "reports"
   | "settings"
-  | "climate";
+  | "climate"
+  | "auth";
 
 
 interface AppContextType {

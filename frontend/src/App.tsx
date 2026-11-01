@@ -28,13 +28,13 @@ const MainContent: React.FC = () => {
   const { activePage } = useApp();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 antialiased selection:bg-teal-100 selection:text-teal-900">
+    <div className="min-h-screen bg-[#F6F8F6] flex flex-col font-sans text-[#172820] antialiased selection:bg-[#E3F3E9] selection:text-[#174D39]">
       <Navbar />
 
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
         <Sidebar />
 
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
+        <main className="flex-1 p-5 md:p-7 lg:p-8 overflow-y-auto">
           {activePage === "dashboard" && <Dashboard />}
           {activePage === "ponds" && <Ponds />}
           {activePage === "pond-detail" && <PondDetail />}
@@ -52,12 +52,14 @@ const MainContent: React.FC = () => {
           {activePage === "maintenance" && <Maintenance />}
           {activePage === "reports" && <Reports />}
           {activePage === "settings" && <Settings />}
+          {activePage === "auth" && <Auth />}
         </main>
       </div>
 
       <SimulateEventModal />
     </div>
   );
+
 };
 
 
