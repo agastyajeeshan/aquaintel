@@ -13,6 +13,7 @@ import {
   Wind,
   UtensilsCrossed,
   Bot,
+  Network,
 } from "lucide-react";
 
 export const Dashboard: React.FC = () => {
@@ -57,6 +58,13 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-2.5">
+          <button
+            onClick={() => setActivePage("edge-cloud")}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F6F8F6] hover:bg-[#E3EAE5] text-[#172820] border border-[#E3EAE5] text-xs font-bold rounded-xl transition-colors shadow-xs"
+          >
+            <Network className="h-3.5 w-3.5 text-[#1E6B4C]" />
+            <span>Edge &amp; Remote</span>
+          </button>
           <button
             onClick={() => setActivePage("autonomous")}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#E3F3E9] hover:bg-[#D4EBDC] text-[#174D39] border border-[#B2D8C6] text-xs font-bold rounded-xl transition-colors shadow-xs"

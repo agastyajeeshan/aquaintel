@@ -20,6 +20,7 @@ import {
   CloudSun,
   ShieldAlert,
   Bot,
+  Network,
 } from "lucide-react";
 
 interface NavGroup {
@@ -55,6 +56,7 @@ const navGroups: NavGroup[] = [
   {
     category: "OPERATIONS",
     items: [
+      { id: "edge-cloud", label: "Edge-Cloud Remote", icon: Network, badge: "HYBRID" },
       { id: "devices", label: "IoT Edge Devices", icon: Radio },
       { id: "alerts", label: "Alert Center", icon: AlertTriangle },
       { id: "maintenance", label: "Maintenance", icon: Wrench },

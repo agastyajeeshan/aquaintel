@@ -21,6 +21,7 @@ export type PageId =
   | "settings"
   | "climate"
   | "autonomous"
+  | "edge-cloud"
   | "auth";
 
 

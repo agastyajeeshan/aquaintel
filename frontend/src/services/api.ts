@@ -182,5 +182,30 @@ export const api = {
     fetchJson(`/autonomous/verify-action/${action_id}`, {
       method: "POST",
     }),
+
+  // Edge-Cloud Hybrid Architecture & Remote Farm Monitoring
+  getCloudHybridStatus: () => fetchJson("/cloud/status"),
+  getCloudGateways: () => fetchJson("/cloud/gateways"),
+  sendEdgeHeartbeat: (gatewayId?: string) =>
+    fetchJson(`/cloud/heartbeat?gateway_id=${gatewayId || "GW-NELLORE-DELTA-01"}`, {
+      method: "POST",
+    }),
+  issueRemoteCommand: (data: any) =>
+    fetchJson("/cloud/remote-command", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  getRemoteCommands: (pondId?: number) =>
+    fetchJson(`/cloud/remote-commands${pondId ? `?pond_id=${pondId}` : ""}`),
+  triggerCloudFlushSync: () =>
+    fetchJson("/cloud/flush-sync", {
+      method: "POST",
+    }),
+  getCloudSyncBatches: () => fetchJson("/cloud/sync-batches"),
+  simulateNetworkCondition: (data: any) =>
+    fetchJson("/cloud/simulate-network", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
 
