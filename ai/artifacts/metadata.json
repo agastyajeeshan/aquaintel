@@ -2,7 +2,7 @@
   "model_id": "AQUAINTEL-RF-DISEASE-V1.0-SYNTHETIC",
   "model_name": "Multi-Pathogen Balanced Random Forest Classifier",
   "version": "1.0.0-synthetic",
-  "created_at": "2026-11-01T02:34:11.123846+00:00",
+  "created_at": "2026-11-02T14:09:29.376832+00:00",
   "target_species": "Litopenaeus vannamei",
   "target_classes": [
     "AHPND_EMS",

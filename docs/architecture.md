@@ -80,3 +80,19 @@ To prevent rigid seasonal assumptions (e.g., assuming summer is always dry or wi
    - Emergency hypoxic safety interlocks ($DO < 3.2\text{ mg/L}$) take absolute precedence over weather forecasts, immediately enforcing maximum aeration and 100% feed lockout.
    - Physical feed and aeration adaptations strictly require explicit operator approval before actuation dispatch.
 
+---
+
+## 5. Edge-Cloud Hybrid Architecture & Remote Farm Monitoring
+
+To support production farm deployments where physical hardware remains on-site while the farmer operates remotely:
+
+1. **Three-Layer Decoupling:**
+   - **Farm Edge Layer:** On-site industrial gateway / ESP32 RTU continuously collecting telemetry, running local range checks, executing autonomous life-support rules without cloud dependence, and buffering records locally in FIFO SQLite storage during internet outages.
+   - **AquaIntel Cloud Layer:** Central cloud backend receiving telemetry over encrypted TLS, maintaining farm histories, executing multi-horizon forecasting and disease models, and issuing authenticated commands with TTL countdowns.
+   - **Remote Farmer Application:** Clean Soft UI web/mobile application providing comprehensive farm oversight, weather and pond status, and authenticated actuator control.
+2. **Local Safety Supremacy:**
+   - Remote manual cloud commands can **never** override local emergency biological protection.
+   - A remote command to stop aerators during an active hypoxia event ($DO < 3.8\text{ mg/L}$) or dispense feed during toxic ammonia ($NH_3 > 0.05\text{ mg/L}$) is rejected by the edge gateway with `REJECTED_LOCAL_SAFETY_HOLD`.
+3. **Idempotent Resynchronization:**
+   - On reconnection after an outage, buffered readings synchronize idempotently with SHA-256 batch deduplication hashes to prevent duplicate sensor rows.
+
