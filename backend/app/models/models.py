@@ -478,5 +478,81 @@ class NotificationLog(Base):
     escalation_level = Column(Integer, default=1)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
 
+class FarmGateway(Base):
+    __tablename__ = "farm_gateways"
+
+    id = Column(Integer, primary_key=True, index=True)
+    gateway_id = Column(String(64), unique=True, index=True, nullable=False)  # e.g. "GW-NELLORE-01"
+    farm_id = Column(Integer, ForeignKey("farms.id"), default=1, index=True)
+    name = Column(String(150), default="Nellore Central Farm Industrial Edge Gateway")
+    status = Column(String(30), default="ONLINE")  # ONLINE, OFFLINE, SYNCING
+    hardware_model = Column(String(100), default="Advantech UNO-2271G / Raspberry Pi CM4")
+    firmware_version = Column(String(50), default="v3.2.0-edge-hybrid")
+    ip_address = Column(String(50), default="192.168.1.1")
+    mac_address = Column(String(50), default="B8:27:EB:4A:89:12")
+    auth_token_hash = Column(String(128), default="sha256_mock_device_token_hash")
+    hmac_secret = Column(String(128), default="aquaintel_edge_gateway_secret_2026")
+    last_heartbeat_at = Column(DateTime, default=datetime.utcnow)
+    connected_at = Column(DateTime, default=datetime.utcnow)
+    disconnected_at = Column(DateTime, nullable=True)
+    buffer_count = Column(Integer, default=0)
+    local_storage_used_mb = Column(Float, default=42.8)
+    lora_frequency_mhz = Column(Float, default=865.2)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class EdgeSyncBatch(Base):
+    __tablename__ = "edge_sync_batches"
+
+    id = Column(Integer, primary_key=True, index=True)
+    batch_id = Column(String(64), unique=True, index=True, nullable=False)
+    gateway_id = Column(String(64), nullable=False, index=True)
+    farm_id = Column(Integer, default=1, index=True)
+    record_type = Column(String(50), default="TELEMETRY")  # TELEMETRY, DECISION_EVENTS, ACTION_RECORDS, AUDIT
+    record_count = Column(Integer, default=0)
+    synced_at = Column(DateTime, default=datetime.utcnow, index=True)
+    duration_ms = Column(Integer, default=120)
+    status = Column(String(30), default="SUCCESS")  # SUCCESS, PARTIAL, DUPLICATE_SKIPPED, FAILED
+    idempotency_hash = Column(String(64), nullable=True, index=True)
+    error_message = Column(Text, nullable=True)
+
+class RemoteCommandRecord(Base):
+    __tablename__ = "remote_command_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    command_id = Column(String(64), unique=True, index=True, nullable=False)  # CMD-REMOTE-XXXXXX
+    farm_id = Column(Integer, default=1, index=True)
+    pond_id = Column(Integer, nullable=True, index=True)
+    device_id = Column(String(64), nullable=False)
+    equipment_type = Column(String(50), nullable=False)  # AERATOR, FEEDER, PUMP, VALVE
+    action = Column(String(50), nullable=False)  # START, STOP, CASCADE_ALL, SUSPEND, RESUME, DISPENSE
+    parameters = Column(JSON, default=dict)
+    
+    # State Machine: QUEUED -> DELIVERED_TO_EDGE -> EXECUTED_ACK / EXPIRED / REJECTED_LOCAL_SAFETY_HOLD / MOTOR_FAULT_TRIPPED
+    status = Column(String(40), default="QUEUED", index=True)
+    issued_by_user = Column(String(100), default="Dr. K. Srinivas (Chief Agritech Director)")
+    user_role = Column(String(50), default="FARM_MANAGER")
+    issued_at = Column(DateTime, default=datetime.utcnow, index=True)
+    expires_at = Column(DateTime, nullable=False)
+    ttl_seconds = Column(Integer, default=120)
+    delivered_to_edge_at = Column(DateTime, nullable=True)
+    executed_at = Column(DateTime, nullable=True)
+    equipment_feedback = Column(String(50), nullable=True)  # RUNNING, STANDBY, FAULT, JAMMED
+    rejection_reason = Column(Text, nullable=True)
+
+class EdgeTelemetryBuffer(Base):
+    __tablename__ = "edge_telemetry_buffers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    record_uuid = Column(String(64), unique=True, index=True, nullable=False)
+    farm_id = Column(Integer, default=1, index=True)
+    pond_id = Column(Integer, nullable=False, index=True)
+    sensor_type = Column(String(50), nullable=False)
+    value = Column(Float, nullable=False)
+    unit = Column(String(20), nullable=False)
+    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    is_synced = Column(Boolean, default=False, index=True)
+    synced_batch_id = Column(String(64), nullable=True)
+
+
 
 

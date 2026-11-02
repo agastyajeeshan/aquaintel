@@ -32,6 +32,7 @@ from .api.telemetry import router as telemetry_router
 from .api.ai import router as ai_router
 from .api.climate import router as climate_router
 from .api.autonomous import router as autonomous_router
+from .api.cloud_edge import router as cloud_edge_router
 
 
 @asynccontextmanager
@@ -81,7 +82,8 @@ api_routers = [
     telemetry_router,
     ai_router,
     climate_router,
-    autonomous_router
+    autonomous_router,
+    cloud_edge_router
 ]
 
 for r in api_routers:

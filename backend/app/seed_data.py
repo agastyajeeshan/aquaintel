@@ -6,7 +6,8 @@ from .models import (
     User, Farm, Pond, Sensor, SensorReading, Feeder, FeedingLog,
     Aerator, AerationEvent, DiseasePrediction, Alert, IoTDevice,
     CameraObservation, MaintenanceRecord, FarmSettings,
-    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord, NotificationLog
+    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord, NotificationLog,
+    FarmGateway, RemoteCommandRecord, EdgeSyncBatch
 )
 from .core.disease_engine import disease_risk_engine
 
@@ -18,6 +19,8 @@ def hash_pw(pw: str) -> str:
 def seed_database(db: Session):
     # Check if already seeded
     if db.query(Farm).first():
+        if db.query(FarmGateway).first() is None:
+            seed_edge_gateway(db)
         return
 
     print("[SEED] Seeding AquaIntel Database with 10-Hectare Commercial Farm Data...")
@@ -528,4 +531,71 @@ def seed_database(db: Session):
 
     db.commit()
     print("[SUCCESS] Seed complete! 10 ponds, 70 sensors, 40 aerators, 10 feeders, autonomous safety engine initialized.")
+    seed_edge_gateway(db)
+
+def seed_edge_gateway(db: Session):
+    now = datetime.utcnow()
+    # 13. Edge-Cloud Hybrid Industrial Gateway & Remote Commands
+    gw = db.query(FarmGateway).filter(FarmGateway.gateway_id == "GW-NELLORE-DELTA-01").first()
+    if not gw:
+        gw = FarmGateway(
+            gateway_id="GW-NELLORE-DELTA-01",
+            farm_id=1,
+            name="Nellore Delta Industrial Edge Controller (Advantech UNO-2271G / CM4)",
+            status="ONLINE",
+            hardware_model="Advantech UNO-2271G-W30CD Industrial Box PC",
+            firmware_version="v3.2.0-edge-hybrid",
+            ip_address="192.168.1.1",
+            mac_address="B8:27:EB:4A:89:12",
+            auth_token_hash="sha256_mock_device_token_hash",
+            hmac_secret="aquaintel_edge_gateway_secret_2026",
+            last_heartbeat_at=now,
+            connected_at=now - timedelta(days=12),
+            disconnected_at=None,
+            buffer_count=0,
+            local_storage_used_mb=42.8,
+            lora_frequency_mhz=865.2
+        )
+        db.add(gw)
+
+    cmd1 = db.query(RemoteCommandRecord).filter(RemoteCommandRecord.command_id == "CMD-REMOTE-A1F89C23").first()
+    if not cmd1:
+        cmd1 = RemoteCommandRecord(
+            command_id="CMD-REMOTE-A1F89C23",
+            farm_id=1,
+            pond_id=4,
+            device_id="AER-P04-1",
+            equipment_type="AERATOR",
+            action="START",
+            parameters={"reason": "Remote manual supplemental aeration boost", "target_do": 6.5},
+            status="EXECUTED_ACK",
+            issued_by_user="Dr. K. Srinivas (Chief Agritech Director)",
+            user_role="ADMIN",
+            issued_at=now - timedelta(hours=3),
+            expires_at=now - timedelta(hours=3) + timedelta(seconds=120),
+            ttl_seconds=120,
+            delivered_to_edge_at=now - timedelta(hours=3) + timedelta(seconds=2),
+            executed_at=now - timedelta(hours=3) + timedelta(seconds=4),
+            equipment_feedback="RUNNING",
+            rejection_reason=None
+        )
+        db.add(cmd1)
+
+    batch1 = db.query(EdgeSyncBatch).filter(EdgeSyncBatch.batch_id == "SYNC-BATCH-INIT-001").first()
+    if not batch1:
+        batch1 = EdgeSyncBatch(
+            batch_id="SYNC-BATCH-INIT-001",
+            gateway_id="GW-NELLORE-DELTA-01",
+            farm_id=1,
+            record_type="TELEMETRY",
+            record_count=70,
+            synced_at=now - timedelta(minutes=10),
+            duration_ms=145,
+            status="SUCCESS",
+            idempotency_hash="batch_init_hash_001"
+        )
+        db.add(batch1)
+
+    db.commit()
+    print("[SUCCESS] Edge gateway & remote command records initialized.")
 

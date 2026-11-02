@@ -4,7 +4,8 @@ from .models import (
     CameraObservation, MaintenanceRecord, FarmSettings,
     DeviceCommand, AuditLog, IngestedTelemetry,
     WeatherObservation, WeatherForecast, ClimateAdaptationEvent, PondForecastRecord,
-    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord, NotificationLog
+    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord, NotificationLog,
+    FarmGateway, EdgeSyncBatch, RemoteCommandRecord, EdgeTelemetryBuffer
 )
 
 __all__ = [
@@ -13,6 +14,7 @@ __all__ = [
     "CameraObservation", "MaintenanceRecord", "FarmSettings",
     "DeviceCommand", "AuditLog", "IngestedTelemetry",
     "WeatherObservation", "WeatherForecast", "ClimateAdaptationEvent", "PondForecastRecord",
-    "AutomationSafetyConfig", "AutonomousDecisionEvent", "AutonomousActionRecord", "NotificationLog"
+    "AutomationSafetyConfig", "AutonomousDecisionEvent", "AutonomousActionRecord", "NotificationLog",
+    "FarmGateway", "EdgeSyncBatch", "RemoteCommandRecord", "EdgeTelemetryBuffer"
 ]
 
