@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { api } from "../services/api";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, CheckCircle } from "lucide-react";
 
 import { CommandSafetyModal } from "../components/CommandSafetyModal";
 
 export const Aeration: React.FC = () => {
   const [aerationData, setAerationData] = useState<any>(null);
+  const [loading, setLoading] = useState<boolean>(true);
   const [msg, setMsg] = useState<string>("");
   const [filterPond, setFilterPond] = useState<number>(0);
 

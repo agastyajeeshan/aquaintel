@@ -195,4 +195,41 @@
   - `npm run build`: Success (`tsc -b && vite build` built in 445ms, 0 errors, 26 optimized chunks).
   - `npm run lint`: 0 errors.
 - **Commit:** `perf(frontend): optimize React rendering and production bundle`
+- **Push Status:** `f01bec0` (Pushed to main)
+
+### Task 8: Shared API Contracts for Future Android Integration
+- **Implementation Summary:**
+  - Designed and authored comprehensive shared API contracts under `frontend/src/types/api-contracts.ts` completely decoupled from React DOM components for multi-platform portability.
+  - Standardized typed schemas for all 16 domain models:
+    1. Generic `ApiResponse<T>`, `PaginatedResponse<T>`, `ApiErrorResponse`
+    2. User, Role-based Access & Auth Tokens (`UserProfile`, `AuthCredentials`, `AuthTokenResponse`)
+    3. Farm & Infrastructure (`FarmOverview`, `FarmConnectivityStatus`)
+    4. Ponds & Water Quality Metrics (`PondSummary`, `WaterQualityMetrics`, `AeratorSummary`, `FeedingSummary`)
+    5. IoT Sensors & Real-time Telemetry (`SensorStatus`, `TelemetryPacket`, `WebSocketTelemetryMessage`)
+    6. Equipment Actuation (`AeratorItem`, `FeederItem`)
+    7. 4-Stage Safety Command Lifecycle (`EquipmentCommandRequest`, `EquipmentCommandResponse`, `CommandLifecycleStage`)
+    8. Multi-Horizon Predictive Intelligence (`MultiHorizonPondForecast`, `ParameterForecastPoint`)
+    9. Bio-Security Pathogen Assessments (`DiseaseRiskAssessment`)
+    10. Coastal Weather Observations (`WeatherObservation`)
+    11. Fleet Alarms & Escalations (`AlertItem`)
+    12. Daily Operational & Batch Farm Reports (`DailyFarmReport`)
+  - Updated `frontend/src/types.ts` to re-export shared contracts and preserve full backward compatibility with web views.
+  - Created exhaustive API and protocol documentation in `docs/API_CONTRACTS_ANDROID.md` detailing:
+    - Base URLs and dynamic client platform headers (`X-Client-Platform: Android`, `X-Device-Id`)
+    - ISO-8601 UTC timestamp requirements and sensor freshness staleness rules (>60s)
+    - Sensor measurement standards, precision ranges, and critical hypoxia/acidosis thresholds
+    - WebSocket telemetry streaming frames and client ping/pong keepalive protocol
+    - Equipment command safety lifecycle, edge emergency overrides, and idempotency guarantees
+    - Direct Kotlin data class mapping snippets for Android Retrofit / KotlinX Serialization
+    - Complete REST endpoint catalog mapped to user roles and access levels
+- **Files Modified / Created:**
+  - `frontend/src/types/api-contracts.ts` (created)
+  - `docs/API_CONTRACTS_ANDROID.md` (created)
+  - `frontend/src/types.ts` (modified)
+  - `frontend/src/pages/Aeration.tsx` (modified)
+  - `reports/FRONTEND_IMPROVEMENT_PROGRESS.md` (modified)
+- **Validation:**
+  - `npm run build`: Success (`tsc -b && vite build` built in 339ms, 0 errors).
+  - `npm run lint`: 0 errors.
+- **Commit:** `feat(frontend): prepare shared API contracts for Android integration`
 - **Push Status:** In progress.
