@@ -34,7 +34,7 @@ export const Ponds: React.FC = () => {
         </div>
 
         {/* Status Filter Buttons */}
-        <div className="flex items-center space-x-1 bg-[#EFF4F0] p-1 rounded-xl border border-[#E3EAE5] text-xs font-semibold">
+        <div className="flex flex-wrap items-center gap-1 bg-[#EFF4F0] p-1 rounded-xl border border-[#E3EAE5] text-xs font-semibold">
           <button
             onClick={() => setFilter("ALL")}
             className={`px-3 py-1.5 rounded-lg transition-all text-xs ${

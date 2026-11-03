@@ -73,20 +73,20 @@ export const SimulateEventModal: React.FC = () => {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 max-h-[80vh] overflow-y-auto">
           {/* Pond Selector */}
           <div>
             <label className="block text-xs font-bold text-[#172820] mb-2 uppercase tracking-wide">
               Target Pond for Scenario
             </label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-1.5 sm:gap-2">
               {Array.from({ length: 10 }, (_, i) => i + 1).map((p) => {
                 const isSelected = selectedPond === p;
                 return (
                   <button
                     key={p}
                     onClick={() => setSelectedPond(p)}
-                    className={`py-2 text-xs font-semibold rounded-lg border transition-all ${
+                    className={`py-1.5 sm:py-2 text-[11px] sm:text-xs font-semibold rounded-lg border transition-all ${
                       isSelected
                         ? "bg-[#247653] text-white border-[#247653] shadow-soft"
                         : "bg-[#F6F8F6] text-[#172820] border-[#E3EAE5] hover:bg-[#EFF4F0]"
@@ -100,10 +100,10 @@ export const SimulateEventModal: React.FC = () => {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex border-b border-[#E3EAE5] space-x-4 text-xs font-semibold">
+          <div className="flex border-b border-[#E3EAE5] space-x-3 sm:space-x-4 text-xs font-semibold overflow-x-auto pb-0.5">
             <button
               onClick={() => setActiveCategory("water")}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 whitespace-nowrap transition-colors ${
                 activeCategory === "water"
                   ? "border-[#247653] text-[#247653]"
                   : "border-transparent text-[#68776F] hover:text-[#172820]"
@@ -113,23 +113,23 @@ export const SimulateEventModal: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveCategory("faults")}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 whitespace-nowrap transition-colors ${
                 activeCategory === "faults"
                   ? "border-[#247653] text-[#247653]"
                   : "border-transparent text-[#68776F] hover:text-[#172820]"
               }`}
             >
-              Equipment & Network Faults
+              Equipment &amp; Network Faults
             </button>
             <button
               onClick={() => setActiveCategory("disease")}
-              className={`pb-2 border-b-2 transition-colors ${
+              className={`pb-2 border-b-2 whitespace-nowrap transition-colors ${
                 activeCategory === "disease"
                   ? "border-[#247653] text-[#247653]"
                   : "border-transparent text-[#68776F] hover:text-[#172820]"
               }`}
             >
-              Disease & Recovery
+              Disease &amp; Recovery
             </button>
           </div>
 

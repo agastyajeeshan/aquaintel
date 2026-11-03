@@ -26,6 +26,8 @@ import { ClimateAdaptation } from "./pages/ClimateAdaptation";
 import { AutonomousEngine } from "./pages/AutonomousEngine";
 import { EdgeCloudHybrid } from "./pages/EdgeCloudHybrid";
 
+import { MobileBottomNav } from "./components/MobileBottomNav";
+
 const MainContent: React.FC = () => {
   const { activePage } = useApp();
 
@@ -36,7 +38,7 @@ const MainContent: React.FC = () => {
       <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
         <Sidebar />
 
-        <main className="flex-1 p-5 md:p-7 lg:p-8 overflow-y-auto">
+        <main className="flex-1 p-3 sm:p-5 md:p-7 lg:p-8 pb-20 lg:pb-8 overflow-y-auto">
           {activePage === "dashboard" && <Dashboard />}
           {activePage === "autonomous" && <AutonomousEngine />}
           {activePage === "edge-cloud" && <EdgeCloudHybrid />}
@@ -60,10 +62,10 @@ const MainContent: React.FC = () => {
         </main>
       </div>
 
+      <MobileBottomNav />
       <SimulateEventModal />
     </div>
   );
-
 };
 
 

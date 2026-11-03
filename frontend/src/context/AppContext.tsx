@@ -53,6 +53,8 @@ interface AppContextType {
   activeAlertsCount: number;
   isSimulateModalOpen: boolean;
   setIsSimulateModalOpen: (open: boolean) => void;
+  isMobileMenuOpen: boolean;
+  setIsMobileMenuOpen: (open: boolean) => void;
   refreshData: () => Promise<void>;
   navigateToPondDetail: (pondId: number) => void;
 }
@@ -83,6 +85,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [ponds, setPonds] = useState<PondSummary[]>([]);
   const [activeAlertsCount, setActiveAlertsCount] = useState<number>(3);
   const [isSimulateModalOpen, setIsSimulateModalOpen] = useState<boolean>(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
 
   const isHardwareConnected = !isDemoMode && !isOffline && wsStatus === "CONNECTED";
 
@@ -257,6 +260,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         activeAlertsCount,
         isSimulateModalOpen,
         setIsSimulateModalOpen,
+        isMobileMenuOpen,
+        setIsMobileMenuOpen,
         refreshData,
         navigateToPondDetail,
       }}

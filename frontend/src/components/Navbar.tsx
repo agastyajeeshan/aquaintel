@@ -13,6 +13,7 @@ import {
   RefreshCw,
   Info,
   X,
+  Menu,
 } from "lucide-react";
 
 export const Navbar: React.FC = () => {
@@ -31,6 +32,8 @@ export const Navbar: React.FC = () => {
     lastUpdated,
     dataSource,
     apiError,
+    isMobileMenuOpen,
+    setIsMobileMenuOpen,
   } = useApp();
 
   const [showDemoBanner, setShowDemoBanner] = useState<boolean>(true);
@@ -130,20 +133,28 @@ export const Navbar: React.FC = () => {
       <header className="bg-white border-b border-[#E3EAE5] sticky top-0 z-30 shadow-[0_2px_8px_rgba(30,60,45,0.03)]">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Left: Branding & Farm Identity */}
-          <div className="flex items-center space-x-3.5">
-            <div className="h-10 w-10 rounded-xl bg-[#247653] flex items-center justify-center text-white shadow-[0_2px_8px_rgba(36,118,83,0.22)]">
+          <div className="flex items-center space-x-2.5 sm:space-x-3.5">
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden p-2 rounded-xl text-[#172820] hover:bg-[#EFF4F0] border border-[#E3EAE5] transition-colors"
+              aria-label="Toggle navigation drawer"
+            >
+              <Menu className="h-5 w-5 text-[#247653]" />
+            </button>
+
+            <div className="h-10 w-10 rounded-xl bg-[#247653] flex items-center justify-center text-white shadow-[0_2px_8px_rgba(36,118,83,0.22)] shrink-0">
               <Waves className="h-5 w-5" />
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <span className="text-lg font-extrabold tracking-tight text-[#172820]">
+                <span className="text-base sm:text-lg font-extrabold tracking-tight text-[#172820]">
                   AQUA<span className="text-[#168B91]">INTEL</span>
                 </span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#E3F3E9] text-[#247653] border border-[#C6E7D2]">
+                <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#E3F3E9] text-[#247653] border border-[#C6E7D2]">
                   10-HA COMMERCIAL
                 </span>
               </div>
-              <p className="text-[11px] text-[#68776F] font-medium leading-none mt-0.5">
+              <p className="text-[10px] sm:text-[11px] text-[#68776F] font-medium leading-none mt-0.5 truncate max-w-[180px] sm:max-w-none">
                 Autonomous Prawn Farm &amp; Predictive Intelligence • Nellore, AP
               </p>
             </div>

@@ -88,7 +88,7 @@ export const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-2.5">
+        <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setActivePage("edge-cloud")}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F6F8F6] hover:bg-[#E3EAE5] text-[#172820] border border-[#E3EAE5] text-xs font-bold rounded-xl transition-colors shadow-xs"
