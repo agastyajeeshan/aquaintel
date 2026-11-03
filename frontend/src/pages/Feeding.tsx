@@ -10,10 +10,25 @@ import {
   Loader2,
 } from "lucide-react";
 
+import { CommandSafetyModal } from "../components/CommandSafetyModal";
+
 export const Feeding: React.FC = () => {
   const [feedingData, setFeedingData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [actionMsg, setActionMsg] = useState<string>("");
+
+  // Safety confirmation modal state
+  const [safetyModal, setSafetyModal] = useState<{
+    isOpen: boolean;
+    feeder: any | null;
+    action: string;
+    amountKg: number;
+  }>({
+    isOpen: false,
+    feeder: null,
+    action: "",
+    amountKg: 2.5,
+  });
 
   const loadData = async () => {
     try {
@@ -31,15 +46,26 @@ export const Feeding: React.FC = () => {
     loadData();
   }, []);
 
-  const handleControl = async (feederId: number, action: string) => {
-    try {
-      const res = await api.controlFeeder(feederId, action, 2.5);
-      setActionMsg(res.message);
-      loadData();
-      setTimeout(() => setActionMsg(""), 4000);
-    } catch (e: any) {
-      setActionMsg("Feeder error: " + e.message);
-    }
+  const triggerFeederSafetyModal = (feeder: any, action: string, amountKg: number = 2.5) => {
+    setSafetyModal({
+      isOpen: true,
+      feeder,
+      action,
+      amountKg,
+    });
+  };
+
+  const handleExecuteFeederControl = async () => {
+    if (!safetyModal.feeder) return;
+    const res = await api.controlFeeder(
+      safetyModal.feeder.id,
+      safetyModal.action,
+      safetyModal.amountKg
+    );
+    setActionMsg(res.message);
+    loadData();
+    setTimeout(() => setActionMsg(""), 4000);
+    return res;
   };
 
   const summary = feedingData?.summary || {
@@ -255,14 +281,14 @@ export const Feeding: React.FC = () => {
                 {/* Actuator Action Buttons */}
                 <div className="flex items-center space-x-1.5 pt-2 border-t border-[#EEF2EF]">
                   <button
-                    onClick={() => handleControl(f.id, "START")}
+                    onClick={() => triggerFeederSafetyModal(f, "START", 2.5)}
                     disabled={isStopped}
                     className="flex-1 py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-[#247653] text-white hover:bg-[#174D39] disabled:opacity-40 transition-colors text-center shadow-sm"
                   >
                     Dispense
                   </button>
                   <button
-                    onClick={() => handleControl(f.id, "STOP")}
+                    onClick={() => triggerFeederSafetyModal(f, "STOP")}
                     className="py-1.5 px-2 rounded-lg text-[11px] font-semibold bg-[#EFF4F0] text-[#172820] hover:bg-[#E3EAE5] transition-colors"
                   >
                     Stop
@@ -279,6 +305,27 @@ export const Feeding: React.FC = () => {
           <Loader2 className="h-3.5 w-3.5 animate-spin text-[#247653]" />
           <span>Syncing automated feeder fleet...</span>
         </div>
+      )}
+
+      {/* Hardened Feeder Command Safety Modal */}
+      {safetyModal.feeder && (
+        <CommandSafetyModal
+          isOpen={safetyModal.isOpen}
+          onClose={() => setSafetyModal({ isOpen: false, feeder: null, action: "", amountKg: 2.5 })}
+          onConfirm={handleExecuteFeederControl}
+          title={
+            safetyModal.action === "STOP"
+              ? "Confirm Feeder Halt"
+              : "Confirm Remote Feed Dispense"
+          }
+          actionDescription={`${safetyModal.action} (${safetyModal.amountKg} kg pellet batch)`}
+          equipmentName={`${safetyModal.feeder.name} - Pond 0${safetyModal.feeder.pond_id}`}
+          equipmentType="FEEDER"
+          safetyWarnings={[
+            "Daily feeding quota is strictly monitored to prevent toxic ammonia/nitrite buildup.",
+            "Feeder dispense will be safely held if Pond DO drops below 4.8 mg/L during the feeding cycle.",
+          ]}
+        />
       )}
     </div>
   );

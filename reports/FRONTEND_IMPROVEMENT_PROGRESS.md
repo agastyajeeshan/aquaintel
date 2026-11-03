@@ -13,8 +13,8 @@
 | **1** | Environment-Based API & WebSocket Connectivity | **COMPLETED** | `670b7c5` | **PUSHED** | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
 | **2** | Live Data, Demo Data & Offline State Separation | **COMPLETED** | `e6020d9` | **PUSHED** | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
 | **3** | Complete Responsive Design (Desktop, Tablet, Mobile) | **COMPLETED** | `0cb9c92` | **PUSHED** | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
-| **4** | Farmer-First Command Center Dashboard Redesign | **COMPLETED** | *In Commit* | *Pushing* | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
-| **5** | Autonomous Engine & Equipment Control Safety | *Pending* | — | — | — |
+| **4** | Farmer-First Command Center Dashboard Redesign | **COMPLETED** | `2738a3a` | **PUSHED** | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
+| **5** | Autonomous Engine & Equipment Control Safety | **COMPLETED** | *In Commit* | *Pushing* | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
 | **6** | Climate Adaptation & Predictive Intelligence UI | *Pending* | — | — | — |
 | **7** | Performance & React Code Quality Optimization | *Pending* | — | — | — |
 | **8** | Shared API Contracts for Future Android Integration | *Pending* | — | — | — |
@@ -119,5 +119,30 @@
   - `npm run build`: Success (`tsc -b && vite build` built in 454ms, 0 errors).
   - `npm run lint`: 0 errors.
 - **Commit:** `feat(frontend): redesign farmer-first dashboard experience`
+- **Push Status:** `2738a3a` (Pushed to main)
+
+### Task 5: Autonomous Engine & Equipment Control Safety
+- **Implementation Summary:**
+  - Created reusable `CommandSafetyModal.tsx` enforcing a rigorous 4-stage command lifecycle:
+    1. `REQUESTED`: Validates local safety interlocks and parameter boundaries.
+    2. `COMMAND_SENT` / `TRANSMITTED`: Verifies gateway connectivity and protocol transmission.
+    3. `ACKNOWLEDGED`: Confirms industrial RTU acknowledgment receipt.
+    4. `VERIFIED`: Confirms physical telemetry state changes.
+  - Implemented Critical Edge Hypoxia Protection: stopping aerators is strictly blocked (`CRITICAL_SAFETY_HOLD`) if Pond DO is below 3.8 mg/L to prevent shrimp asphyxiation.
+  - Integrated `CommandSafetyModal` into `Aeration.tsx`, `Feeding.tsx`, and `PondDetail.tsx`.
+  - Hardened `AutonomousEngine.tsx` by replacing all raw browser `alert()` popups with styled, non-blocking notification banners (`actionError`, `actionFeedback`).
+  - Added explicit hardware disconnect and simulation warnings preventing operators from mistaking simulation responses for physical hardware actuation.
+  - Enforced daily feeding limit checks and DO lockout warnings before dispensing feed.
+- **Files Modified / Created:**
+  - `frontend/src/components/CommandSafetyModal.tsx` (created)
+  - `frontend/src/pages/Aeration.tsx` (modified)
+  - `frontend/src/pages/Feeding.tsx` (modified)
+  - `frontend/src/pages/PondDetail.tsx` (modified)
+  - `frontend/src/pages/AutonomousEngine.tsx` (modified)
+  - `reports/FRONTEND_IMPROVEMENT_PROGRESS.md` (modified)
+- **Validation:**
+  - `npm run build`: Success (`tsc -b && vite build` built in 458ms, 0 errors).
+  - `npm run lint`: 0 errors.
+- **Commit:** `fix(frontend): harden autonomous and manual equipment controls`
 - **Push Status:** In progress.
 

@@ -22,12 +22,31 @@ import {
   AlertCircle,
 } from "lucide-react";
 
+import { CommandSafetyModal } from "../components/CommandSafetyModal";
+
 export const PondDetail: React.FC = () => {
   const { selectedPondId, setActivePage } = useApp();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [timeRange, setTimeRange] = useState<string>("24h");
   const [actuatorMsg, setActuatorMsg] = useState<string>("");
+
+  // Safety modal state
+  const [safetyModal, setSafetyModal] = useState<{
+    isOpen: boolean;
+    type: "AERATOR" | "FEEDER";
+    id: number;
+    name: string;
+    action: string;
+    currentDO?: number;
+    amountKg?: number;
+  }>({
+    isOpen: false,
+    type: "AERATOR",
+    id: 0,
+    name: "",
+    action: "",
+  });
 
   const loadPondData = async () => {
     try {
@@ -45,25 +64,42 @@ export const PondDetail: React.FC = () => {
     loadPondData();
   }, [selectedPondId, timeRange]);
 
-  const handleAeratorAction = async (aeratorId: number, action: string) => {
-    try {
-      const res = await api.controlAerator(aeratorId, action);
-      setActuatorMsg(res.message);
-      loadPondData();
-      setTimeout(() => setActuatorMsg(""), 4000);
-    } catch (e: any) {
-      setActuatorMsg("Actuator command error: " + e.message);
-    }
+  const triggerAeratorSafetyModal = (aerator: any, action: string) => {
+    setSafetyModal({
+      isOpen: true,
+      type: "AERATOR",
+      id: aerator.id,
+      name: `${aerator.name} (${aerator.code})`,
+      action,
+      currentDO: data?.overview?.water_quality?.do,
+    });
   };
 
-  const handleFeederAction = async (feederId: number, action: string) => {
-    try {
-      const res = await api.controlFeeder(feederId, action, 2.5);
+  const triggerFeederSafetyModal = (feeder: any, action: string, amountKg: number = 2.5) => {
+    setSafetyModal({
+      isOpen: true,
+      type: "FEEDER",
+      id: feeder.id,
+      name: feeder.name || `Feeder P0${selectedPondId}`,
+      action,
+      amountKg,
+      currentDO: data?.overview?.water_quality?.do,
+    });
+  };
+
+  const handleExecuteSafetyAction = async () => {
+    if (safetyModal.type === "AERATOR") {
+      const res = await api.controlAerator(safetyModal.id, safetyModal.action);
       setActuatorMsg(res.message);
       loadPondData();
       setTimeout(() => setActuatorMsg(""), 4000);
-    } catch (e: any) {
-      setActuatorMsg("Feeder command error: " + e.message);
+      return res;
+    } else {
+      const res = await api.controlFeeder(safetyModal.id, safetyModal.action, safetyModal.amountKg || 2.5);
+      setActuatorMsg(res.message);
+      loadPondData();
+      setTimeout(() => setActuatorMsg(""), 4000);
+      return res;
     }
   };
 
@@ -332,14 +368,14 @@ export const PondDetail: React.FC = () => {
 
                     {isRunning ? (
                       <button
-                        onClick={() => handleAeratorAction(a.id, "STOP")}
+                        onClick={() => triggerAeratorSafetyModal(a, "STOP")}
                         className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#FDF2F2] text-[#C84040] border border-[#F7C8C8] hover:bg-[#FBE8E8] transition-colors"
                       >
                         Stop
                       </button>
                     ) : (
                       <button
-                        onClick={() => handleAeratorAction(a.id, "START")}
+                        onClick={() => triggerAeratorSafetyModal(a, "START")}
                         className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-[#247653] text-white hover:bg-[#174D39] shadow-sm transition-colors"
                       >
                         Start
@@ -347,7 +383,7 @@ export const PondDetail: React.FC = () => {
                     )}
 
                     <button
-                      onClick={() => handleAeratorAction(a.id, "EMERGENCY_OVERRIDE")}
+                      onClick={() => triggerAeratorSafetyModal(a, "EMERGENCY_OVERRIDE")}
                       title="Emergency Override"
                       className="px-2 py-1 rounded-lg text-xs font-semibold bg-[#FEF7EC] text-[#B7791F] border border-[#F6DFB3] hover:bg-[#FDF0DB] transition-colors"
                     >
@@ -404,21 +440,21 @@ export const PondDetail: React.FC = () => {
                 </span>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => handleFeederAction(feeder.id, "START")}
+                    onClick={() => triggerFeederSafetyModal(feeder, "START", 2.5)}
                     className="btn-primary text-xs"
                   >
                     <Play className="h-3.5 w-3.5" />
                     <span>Dispense (2.5 kg)</span>
                   </button>
                   <button
-                    onClick={() => handleFeederAction(feeder.id, "STOP")}
+                    onClick={() => triggerFeederSafetyModal(feeder, "STOP")}
                     className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-[#FDF2F2] text-[#C84040] border border-[#F7C8C8] hover:bg-[#FBE8E8] transition-colors"
                   >
                     <Square className="h-3.5 w-3.5 inline mr-1" />
                     <span>Stop Dispenser</span>
                   </button>
                   <button
-                    onClick={() => handleFeederAction(feeder.id, "SCHEDULE")}
+                    onClick={() => triggerFeederSafetyModal(feeder, "SCHEDULE")}
                     className="btn-secondary text-xs"
                   >
                     <Clock className="h-3.5 w-3.5" />
@@ -450,6 +486,46 @@ export const PondDetail: React.FC = () => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Hardened Actuator Safety Modal */}
+      {safetyModal.isOpen && (
+        <CommandSafetyModal
+          isOpen={safetyModal.isOpen}
+          onClose={() => setSafetyModal({ isOpen: false, type: "AERATOR", id: 0, name: "", action: "" })}
+          onConfirm={handleExecuteSafetyAction}
+          title={
+            safetyModal.type === "AERATOR"
+              ? safetyModal.action === "STOP"
+                ? "Confirm Aeration Shutdown"
+                : "Confirm Aerator Start"
+              : safetyModal.action === "STOP"
+              ? "Confirm Feeder Halt"
+              : "Confirm Remote Feed Dispense"
+          }
+          actionDescription={`${safetyModal.action} (${safetyModal.type})`}
+          equipmentName={safetyModal.name}
+          equipmentType={safetyModal.type}
+          currentDO={safetyModal.currentDO}
+          criticalSafetyHold={
+            safetyModal.type === "AERATOR" &&
+            safetyModal.action === "STOP" &&
+            (safetyModal.currentDO !== undefined && safetyModal.currentDO < 3.8)
+          }
+          criticalSafetyHoldReason={
+            safetyModal.type === "AERATOR" &&
+            safetyModal.action === "STOP" &&
+            (safetyModal.currentDO !== undefined && safetyModal.currentDO < 3.8)
+              ? `Local Edge Emergency Hypoxia Protection is running on Pond 0${selectedPondId} (DO = ${safetyModal.currentDO} mg/L < 3.8 mg/L critical threshold). Stopping aerators during active hypoxia is strictly forbidden by edge safety firmware.`
+              : undefined
+          }
+          safetyWarnings={[
+            "Industrial motor anti-short-cycle delay requires 10 minutes between consecutive starts.",
+            safetyModal.action === "STOP"
+              ? "Halting aerators during critical hours can cause sudden oxygen depletion."
+              : "Verify water depth is at least 1.0m to prevent bottom sediment disturbance.",
+          ]}
+        />
       )}
     </div>
   );

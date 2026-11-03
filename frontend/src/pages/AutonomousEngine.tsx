@@ -29,6 +29,7 @@ export const AutonomousEngine: React.FC = () => {
   const [evaluating, setEvaluating] = useState<boolean>(false);
   const [selectedPond, setSelectedPond] = useState<number>(4);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [modeConfirmModal, setModeConfirmModal] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -60,11 +61,13 @@ export const AutonomousEngine: React.FC = () => {
     try {
       await api.setAutonomousMode(newMode, "Farm General Manager", "Console operator selection");
       setActionFeedback(`Operating mode updated to ${newMode}`);
+      setActionError(null);
       setModeConfirmModal(null);
       fetchData();
       setTimeout(() => setActionFeedback(null), 4000);
     } catch (e: any) {
-      alert(`Failed to change mode: ${e.message}`);
+      setActionError(`Failed to change mode: ${e.message}`);
+      setTimeout(() => setActionError(null), 6000);
     }
   };
 
@@ -73,10 +76,12 @@ export const AutonomousEngine: React.FC = () => {
       setEvaluating(true);
       const res = await api.triggerAutonomousEvaluate();
       setActionFeedback(`Fleet evaluation completed: ${res.events_generated_count} events assessed.`);
+      setActionError(null);
       fetchData();
       setTimeout(() => setActionFeedback(null), 4000);
     } catch (e: any) {
-      alert(`Evaluation failed: ${e.message}`);
+      setActionError(`Evaluation failed: ${e.message}`);
+      setTimeout(() => setActionError(null), 6000);
     } finally {
       setEvaluating(false);
     }
@@ -86,10 +91,12 @@ export const AutonomousEngine: React.FC = () => {
     try {
       const res = await api.manualAutonomousOverride(action, selectedPond, "Dr. K. Srinivas");
       setActionFeedback(res.message);
+      setActionError(null);
       fetchData();
       setTimeout(() => setActionFeedback(null), 4000);
     } catch (e: any) {
-      alert(`Override failed: ${e.message}`);
+      setActionError(`Override failed: ${e.message}`);
+      setTimeout(() => setActionError(null), 6000);
     }
   };
 
@@ -97,16 +104,19 @@ export const AutonomousEngine: React.FC = () => {
     try {
       const res = await api.simulateAutonomousScenario(scenario, selectedPond);
       setActionFeedback(`[SIMULATION] ${res.message}`);
+      setActionError(null);
       fetchData();
       setTimeout(() => setActionFeedback(null), 5000);
     } catch (e: any) {
-      alert(`Simulation failed: ${e.message}`);
+      setActionError(`Simulation failed: ${e.message}`);
+      setTimeout(() => setActionError(null), 6000);
     }
   };
 
   const handleVerifyAction = async (actionId: string) => {
     try {
       const res = await api.verifyAutonomousAction(actionId);
+      setActionError(null);
       if (res.recovery_verified) {
         setActionFeedback(`Action ${actionId} recovery confirmed! DO reading: ${res.current_reading} mg/L`);
       } else {
@@ -115,7 +125,8 @@ export const AutonomousEngine: React.FC = () => {
       fetchData();
       setTimeout(() => setActionFeedback(null), 4000);
     } catch (e: any) {
-      alert(`Verification check failed: ${e.message}`);
+      setActionError(`Verification check failed: ${e.message}`);
+      setTimeout(() => setActionError(null), 6000);
     }
   };
 
@@ -194,6 +205,13 @@ export const AutonomousEngine: React.FC = () => {
         <div className="bg-[#EBF7F0] border border-[#B2D8C6] text-[#174D39] px-4 py-2.5 rounded-lg text-xs md:text-sm font-medium flex items-center gap-2 shadow-sm animate-fade-in">
           <CheckCircle2 className="w-4 h-4 text-[#1E6B4C] shrink-0" />
           <span>{actionFeedback}</span>
+        </div>
+      )}
+
+      {actionError && (
+        <div className="bg-[#FDF2F2] border border-[#F7C8C8] text-[#C84040] px-4 py-2.5 rounded-lg text-xs md:text-sm font-medium flex items-center gap-2 shadow-sm animate-fade-in">
+          <ShieldAlert className="w-4 h-4 text-[#C84040] shrink-0" />
+          <span>{actionError}</span>
         </div>
       )}
 
