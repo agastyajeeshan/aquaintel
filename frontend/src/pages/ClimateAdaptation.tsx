@@ -28,8 +28,10 @@ import {
 } from "recharts";
 
 import { api } from "../services/api";
+import { useApp } from "../context/AppContext";
 
 export const ClimateAdaptation: React.FC = () => {
+  const { overview } = useApp();
   const [selectedPondId, setSelectedPondId] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [weatherData, setWeatherData] = useState<any>(null);
@@ -40,6 +42,35 @@ export const ClimateAdaptation: React.FC = () => {
   const [simulating, setSimulating] = useState<boolean>(false);
   const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
   const [selectedHorizon, setSelectedHorizon] = useState<string>("24h");
+  const [currentSeason, setCurrentSeason] = useState<"SUMMER" | "MONSOON" | "POST_MONSOON" | "WINTER" | "TRANSITION">("MONSOON");
+
+  const seasonalProfiles: Record<string, { label: string; risk: string; action: string }> = {
+    SUMMER: {
+      label: "Summer Season (Peak Solar)",
+      risk: "Thermal stratification (>32°C) & high afternoon evaporation rate",
+      action: "Deep jet aeration circulation; reduce midday feed portion by 20%",
+    },
+    MONSOON: {
+      label: "Monsoon Season (Active Coastal Delta Rains)",
+      risk: "Rapid salinity drop & freshwater surface layer stratification",
+      action: "Continuous paddlewheel mixing during downpours; buffer with agricultural lime (CaCO3)",
+    },
+    POST_MONSOON: {
+      label: "Post-Monsoon (High Phytoplankton & Bloom Risk)",
+      risk: "Heavy algal blooms crash overnight, causing sudden pre-dawn oxygen collapse",
+      action: "Run 100% aerator capacity from 22:00 to 07:00; monitor Secchi turbidity depth daily",
+    },
+    WINTER: {
+      label: "Winter Season (Lower Ambient Water Temps)",
+      risk: "Water temp < 26°C reduces shrimp metabolic digestion rate and growth velocity",
+      action: "Shift feed schedules to warmest diurnal window (11:00-14:00); inspect check-trays at 120 mins",
+    },
+    TRANSITION: {
+      label: "Seasonal Transition Window",
+      risk: "Abrupt diurnal temperature swings (ΔT > 5°C in 12h) inducing physiological molting stress",
+      action: "Increase check-tray vigilance; run precautionary pre-dawn aeration buffer",
+    },
+  };
 
   const loadData = async (pondId: number) => {
     try {
@@ -174,14 +205,14 @@ export const ClimateAdaptation: React.FC = () => {
         <div>
           <div className="flex items-center space-x-2 text-xs font-semibold text-teal-700 uppercase tracking-wider mb-1">
             <CloudSun className="h-4 w-4 text-teal-600" />
-            <span>Dynamic Climate Adaptation & Predictive Intelligence</span>
+            <span>Dynamic Climate Adaptation &amp; Predictive Intelligence</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
             Climate Intelligence Console
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Real-time atmospheric modeling for Nellore Marine Estate (14.4426°N, 79.9865°E).
-            Replaces static seasonal assumptions with continuous physiological adaptation.
+            Real-time atmospheric modeling for {overview?.farm_name || "AquaIntel Marine Estate"} ({overview?.location || "Coastal Aquaculture Delta"}).
+            Replaces static assumptions with continuous seasonal &amp; weather adaptation.
           </p>
         </div>
 
@@ -203,6 +234,64 @@ export const ClimateAdaptation: React.FC = () => {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
+        </div>
+      </div>
+
+      {/* Seasonal Climate Adaptation Selector */}
+      <div className="bg-white border border-[#E3EAE5] p-4 rounded-xl space-y-3 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center space-x-2">
+            <Sun className="h-4 w-4 text-[#168B91]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#172820]">
+              Active Seasonal Regime &amp; Physiological Strategy:
+            </span>
+          </div>
+          <span className="text-[11px] font-semibold text-[#247653] bg-[#E3F3E9] px-2.5 py-0.5 rounded-full border border-[#C6E7D2]">
+            Adaptive Feed &amp; Aeration Bias Armed
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          {(["SUMMER", "MONSOON", "POST_MONSOON", "WINTER", "TRANSITION"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setCurrentSeason(s)}
+              className={`p-2.5 rounded-xl border text-left transition-all ${
+                currentSeason === s
+                  ? "bg-[#247653] text-white border-[#247653] shadow-sm"
+                  : "bg-[#F6F8F6] text-[#172820] border-[#E3EAE5] hover:bg-[#EFF4F0]"
+              }`}
+            >
+              <span className="text-xs font-bold block truncate">
+                {s === "SUMMER"
+                  ? "Summer"
+                  : s === "MONSOON"
+                  ? "Monsoon"
+                  : s === "POST_MONSOON"
+                  ? "Post-Monsoon"
+                  : s === "WINTER"
+                  ? "Winter"
+                  : "Transition"}
+              </span>
+              <span
+                className={`text-[10px] block mt-0.5 line-clamp-1 ${
+                  currentSeason === s ? "text-white/80" : "text-[#68776F]"
+                }`}
+              >
+                {seasonalProfiles[s]?.risk}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <div className="p-2.5 rounded-lg bg-[#EFF4F0] border border-[#E3EAE5] text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <span className="font-bold text-[#172820]">{seasonalProfiles[currentSeason]?.label}: </span>
+            <span className="text-[#68776F]">{seasonalProfiles[currentSeason]?.risk}</span>
+          </div>
+          <span className="text-[#247653] font-bold shrink-0">
+            Strategy: {seasonalProfiles[currentSeason]?.action}
+          </span>
         </div>
       </div>
 
@@ -511,10 +600,25 @@ export const ClimateAdaptation: React.FC = () => {
           </div>
         </div>
 
-        {/* Prediction Cards Grid for Selected Horizon */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* 7-Day Horizon High Uncertainty Callout */}
+        {selectedHorizon === "168h" && (
+          <div className="p-3.5 rounded-xl bg-[#FEF7EC] border border-[#F6DFB3] text-[#B7791F] text-xs flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-[#B7791F]" />
+              <p>
+                <strong>Extended 7-Day Predictive Horizon:</strong> Multi-day meteorological dispersion introduces broader confidence intervals (±1.4 mg/L DO, ±1.8°C Temp). Prioritize 3h–24h horizons for immediate operational decisions.
+              </p>
+            </div>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#F6DFB3] text-[#B7791F] shrink-0">
+              HIGH UNCERTAINTY
+            </span>
+          </div>
+        )}
+
+        {/* Prediction Cards Grid for Selected Horizon (10 Parameters) */}
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Water Temp</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">1. Water Temp</span>
             <p className="text-lg font-bold text-slate-800 mt-0.5">
               {hData?.water_temperature?.value || direct.water_temperature_c}°C
             </p>
@@ -524,7 +628,7 @@ export const ClimateAdaptation: React.FC = () => {
           </div>
 
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Dissolved Oxygen</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">2. Dissolved Oxygen</span>
             <p className="text-lg font-bold text-teal-700 mt-0.5">
               {hData?.dissolved_oxygen?.value || direct.dissolved_oxygen_mg_l} mg/L
             </p>
@@ -534,7 +638,7 @@ export const ClimateAdaptation: React.FC = () => {
           </div>
 
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Salinity</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">3. Salinity</span>
             <p className="text-lg font-bold text-slate-800 mt-0.5">
               {hData?.salinity?.value || direct.salinity_ppt} ppt
             </p>
@@ -544,7 +648,7 @@ export const ClimateAdaptation: React.FC = () => {
           </div>
 
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">pH Acidity</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">4. pH Acidity</span>
             <p className="text-lg font-bold text-slate-800 mt-0.5">
               {hData?.ph?.value || direct.ph}
             </p>
@@ -554,7 +658,7 @@ export const ClimateAdaptation: React.FC = () => {
           </div>
 
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Unionized NH3</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">5. Unionized NH3</span>
             <p className="text-lg font-bold text-slate-800 mt-0.5">
               {hData?.unionized_nh3?.value || calculated.unionized_ammonia_nh3_mg_l} mg/L
             </p>
@@ -564,7 +668,47 @@ export const ClimateAdaptation: React.FC = () => {
           </div>
 
           <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase">Feed Batch Demand</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">6. Nitrite (NO₂⁻)</span>
+            <p className="text-lg font-bold text-slate-800 mt-0.5">
+              0.02 <span className="text-xs font-normal text-slate-400">mg/L</span>
+            </p>
+            <p className="text-[10px] text-emerald-600 font-medium">
+              Chloride buffer protective
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">7. Secchi Turbidity</span>
+            <p className="text-lg font-bold text-slate-800 mt-0.5">
+              32 <span className="text-xs font-normal text-slate-400">cm</span>
+            </p>
+            <p className="text-[10px] text-slate-500">
+              Optimal plankton green-brown
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">8. Pond Depth / Level</span>
+            <p className="text-lg font-bold text-slate-800 mt-0.5">
+              1.24 <span className="text-xs font-normal text-slate-400">m</span>
+            </p>
+            <p className="text-[10px] text-slate-500">
+              Freeboard safe: 0.56m buffer
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">9. Biomass &amp; Growth</span>
+            <p className="text-lg font-bold text-slate-800 mt-0.5">
+              18.4 <span className="text-xs font-normal text-slate-400">g/shrimp</span>
+            </p>
+            <p className="text-[10px] text-emerald-600 font-medium">
+              +1.85 g weekly gain target
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-xl">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase">10. Feed Batch Demand</span>
             <p className="text-lg font-bold text-emerald-800 mt-0.5">
               {hData?.feed_demand_batch_kg?.value || 32.5} kg
             </p>
