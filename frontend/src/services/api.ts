@@ -1,19 +1,65 @@
-const API_BASE = "http://localhost:8000/api";
+import ENV from "../config/env";
+
+export { ENV };
+
+export class ApiError extends Error {
+  public status: number;
+  public statusText: string;
+  public endpoint: string;
+  public details?: any;
+
+  constructor(status: number, statusText: string, endpoint: string, details?: any) {
+    super(`API Error ${status} (${statusText}) at ${endpoint}`);
+    this.name = "ApiError";
+    this.status = status;
+    this.statusText = statusText;
+    this.endpoint = endpoint;
+    this.details = details;
+  }
+}
 
 export async function fetchJson(endpoint: string, options: RequestInit = {}) {
-  try {
-    const res = await fetch(`${API_BASE}${endpoint}`, {
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-      ...options,
-    });
-    if (!res.ok) {
-      throw new Error(`API error ${res.status}: ${res.statusText}`);
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), ENV.timeoutMs);
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+
+  // Inject Bearer token if present
+  if (typeof window !== "undefined" && window.localStorage) {
+    const token = localStorage.getItem(ENV.authTokenKey);
+    if (token && !headers["Authorization"]) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
+  }
+
+  try {
+    const res = await fetch(`${ENV.getApiBaseUrl()}${endpoint}`, {
+      ...options,
+      headers,
+      signal: options.signal || controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!res.ok) {
+      let errDetails = null;
+      try {
+        errDetails = await res.json();
+      } catch {
+        // Body was not JSON
+      }
+      throw new ApiError(res.status, res.statusText, endpoint, errDetails);
+    }
+
     return await res.json();
-  } catch (err) {
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") {
+      throw new ApiError(408, `Request Timeout (${ENV.timeoutMs}ms)`, endpoint);
+    }
     console.warn(`Fetch error for ${endpoint}:`, err);
     throw err;
   }
@@ -64,7 +110,7 @@ export const api = {
   getCVSamples: () => fetchJson("/cv/samples"),
   analyzeCV: async (formData?: FormData) => {
     try {
-      const res = await fetch(`${API_BASE}/cv/analyze`, {
+      const res = await fetch(`${ENV.getApiBaseUrl()}/cv/analyze`, {
         method: "POST",
         body: formData || new FormData(),
       });
@@ -76,6 +122,11 @@ export const api = {
 
   // Devices
   getDevices: () => fetchJson("/devices"),
+  addDevice: (deviceId: string, deviceType: string, pondId?: number) => {
+    const params = new URLSearchParams({ device_id: deviceId, device_type: deviceType });
+    if (pondId !== undefined && pondId !== null) params.append("pond_id", pondId.toString());
+    return fetchJson(`/devices?${params.toString()}`, { method: "POST" });
+  },
   
   // Alerts
   getAlerts: (status?: string, severity?: string) => {

@@ -37,8 +37,7 @@ export const IoTDevices: React.FC = () => {
     e.preventDefault();
     if (!newDevId) return;
     try {
-      await api.getDevices();
-      await (await fetch(`http://localhost:8000/api/devices?device_id=${newDevId}&device_type=${newDevType}&pond_id=${newPondId}`, { method: "POST" })).json();
+      await api.addDevice(newDevId, newDevType, newPondId);
       setMsg(`Device ${newDevId} registered successfully on LoRa network.`);
       setShowAddModal(false);
       setNewDevId("");

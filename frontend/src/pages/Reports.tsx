@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { api } from "../services/api";
+import { api, ENV } from "../services/api";
 import {
   FileText,
   Download,
@@ -74,7 +74,7 @@ export const Reports: React.FC = () => {
           </button>
 
           <a
-            href="http://localhost:8000/api/reports/export-csv"
+            href={ENV.getExportCsvUrl()}
             download
             className="btn-primary text-xs flex items-center space-x-1.5 py-2 px-3.5"
           >

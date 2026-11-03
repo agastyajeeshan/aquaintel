@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useApp } from "../context/AppContext";
+import { ENV } from "../services/api";
 import {
   Activity,
   Droplets,
@@ -38,7 +39,7 @@ export const WaterQuality: React.FC = () => {
         </div>
 
         <a
-          href="http://localhost:8000/api/reports/export-csv"
+          href={ENV.getExportCsvUrl()}
           download
           className="btn-secondary text-xs"
         >

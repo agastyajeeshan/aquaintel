@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { User, FarmOverview, PondSummary } from "../types";
-import { api } from "../services/api";
+import { api, ENV } from "../services/api";
+
+export type WsConnectionStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "RECONNECTING" | "FAILED";
 
 export type PageId =
   | "dashboard"
@@ -36,6 +38,7 @@ interface AppContextType {
   setIsOffline: (val: boolean) => void;
   offlineQueueCount: number;
   setOfflineQueueCount: (val: number) => void;
+  wsStatus: WsConnectionStatus;
   currentUser: User;
   setCurrentUser: (user: User) => void;
   overview: FarmOverview | null;
@@ -64,6 +67,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState<number>(0);
+  const [wsStatus, setWsStatus] = useState<WsConnectionStatus>("CONNECTING");
   const [currentUser, setCurrentUser] = useState<User>(defaultUser);
   const [overview, setOverview] = useState<FarmOverview | null>(null);
   const [ponds, setPonds] = useState<PondSummary[]>([]);
@@ -92,18 +96,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => clearInterval(interval);
   }, []);
 
-  // WebSocket Live Telemetry Connection
+  // WebSocket Live Telemetry Connection with Exponential Backoff
   useEffect(() => {
     let ws: WebSocket | null = null;
     let reconnectTimeout: any = null;
+    let retryCount = 0;
+    let isUnmounted = false;
 
     const connectWs = () => {
+      if (isUnmounted) return;
+
+      const wsUrl = ENV.getWsBaseUrl();
+      setWsStatus(retryCount === 0 ? "CONNECTING" : "RECONNECTING");
+
       try {
-        ws = new WebSocket("ws://localhost:8000/ws/telemetry");
+        ws = new WebSocket(wsUrl);
+
         ws.onopen = () => {
-          console.log("Telemetry WebSocket connected");
+          if (isUnmounted) return;
+          console.log(`Telemetry WebSocket connected: ${wsUrl}`);
+          setWsStatus("CONNECTED");
+          retryCount = 0;
         };
+
         ws.onmessage = (event) => {
+          if (isUnmounted) return;
           try {
             const data = JSON.parse(event.data);
             if (data.type === "TELEMETRY_UPDATE") {
@@ -123,12 +140,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                       status: update.status,
                       active_event: update.active_event,
                       water_quality: {
-                        do: update.metrics.do.value,
-                        ph: update.metrics.ph.value,
-                        temperature: update.metrics.temperature.value,
-                        ammonia: update.metrics.ammonia.value,
-                        salinity: update.metrics.salinity.value,
-                        turbidity: update.metrics.turbidity.value,
+                        do: update.metrics?.do?.value ?? p.water_quality.do,
+                        ph: update.metrics?.ph?.value ?? p.water_quality.ph,
+                        temperature: update.metrics?.temperature?.value ?? p.water_quality.temperature,
+                        ammonia: update.metrics?.ammonia?.value ?? p.water_quality.ammonia,
+                        salinity: update.metrics?.salinity?.value ?? p.water_quality.salinity,
+                        turbidity: update.metrics?.turbidity?.value ?? p.water_quality.turbidity,
                       },
                     };
                   });
@@ -139,19 +156,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.error("WS parse error", err);
           }
         };
+
+        ws.onerror = () => {
+          if (isUnmounted) return;
+          setWsStatus(retryCount > 8 ? "FAILED" : "RECONNECTING");
+        };
+
         ws.onclose = () => {
-          reconnectTimeout = setTimeout(connectWs, 4000);
+          if (isUnmounted) return;
+          setWsStatus(retryCount > 8 ? "FAILED" : "DISCONNECTED");
+          // Exponential backoff: 1s, 1.5s, 2.25s, ... capped at 30s + jitter
+          const delay = Math.min(30000, 1000 * Math.pow(1.5, retryCount)) + Math.random() * 500;
+          retryCount++;
+          reconnectTimeout = setTimeout(connectWs, delay);
         };
       } catch (err) {
-        reconnectTimeout = setTimeout(connectWs, 4000);
+        if (isUnmounted) return;
+        setWsStatus("FAILED");
+        const delay = Math.min(30000, 2000 * Math.pow(1.5, retryCount));
+        retryCount++;
+        reconnectTimeout = setTimeout(connectWs, delay);
       }
     };
 
     connectWs();
 
     return () => {
-      if (ws) ws.close();
+      isUnmounted = true;
+      if (ws) {
+        ws.onclose = null;
+        ws.onerror = null;
+        ws.close();
+      }
       if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      setWsStatus("DISCONNECTED");
     };
   }, []);
 
@@ -173,6 +211,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setIsOffline,
         offlineQueueCount,
         setOfflineQueueCount,
+        wsStatus,
         currentUser,
         setCurrentUser,
         overview,
