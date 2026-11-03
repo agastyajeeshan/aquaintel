@@ -3,6 +3,7 @@ import type { User, FarmOverview, PondSummary } from "../types";
 import { api, ENV } from "../services/api";
 
 export type WsConnectionStatus = "DISCONNECTED" | "CONNECTING" | "CONNECTED" | "RECONNECTING" | "FAILED";
+export type OperatingState = "LIVE" | "DEMO" | "OFFLINE" | "CACHED" | "CONNECTING" | "ERROR";
 
 export type PageId =
   | "dashboard"
@@ -39,6 +40,12 @@ interface AppContextType {
   offlineQueueCount: number;
   setOfflineQueueCount: (val: number) => void;
   wsStatus: WsConnectionStatus;
+  operatingState: OperatingState;
+  lastUpdated: Date | null;
+  dataSource: string;
+  gatewayStatus: string;
+  apiError: string | null;
+  isHardwareConnected: boolean;
   currentUser: User;
   setCurrentUser: (user: User) => void;
   overview: FarmOverview | null;
@@ -68,11 +75,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [isOffline, setIsOffline] = useState<boolean>(false);
   const [offlineQueueCount, setOfflineQueueCount] = useState<number>(0);
   const [wsStatus, setWsStatus] = useState<WsConnectionStatus>("CONNECTING");
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(new Date());
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [gatewayStatus, setGatewayStatus] = useState<string>("ONLINE");
   const [currentUser, setCurrentUser] = useState<User>(defaultUser);
   const [overview, setOverview] = useState<FarmOverview | null>(null);
   const [ponds, setPonds] = useState<PondSummary[]>([]);
   const [activeAlertsCount, setActiveAlertsCount] = useState<number>(3);
   const [isSimulateModalOpen, setIsSimulateModalOpen] = useState<boolean>(false);
+
+  const isHardwareConnected = !isDemoMode && !isOffline && wsStatus === "CONNECTED";
+
+  const operatingState: OperatingState = (() => {
+    if (apiError) return "ERROR";
+    if (isOffline) return "OFFLINE";
+    if (wsStatus === "CONNECTING" && !overview) return "CONNECTING";
+    if (wsStatus === "FAILED" || wsStatus === "DISCONNECTED") return "CACHED";
+    if (isDemoMode) return "DEMO";
+    return "LIVE";
+  })();
+
+  const dataSource = (() => {
+    if (isDemoMode) return "Deterministic Coastal Aquaculture Simulation Engine";
+    if (isOffline) return "Local Gateway Flash Buffer (Offline FIFO Spool)";
+    if (wsStatus === "FAILED" || wsStatus === "DISCONNECTED") return "Local Browser Cache (Historical Readings)";
+    return "Modbus RS485 Submerged Probes & Edge RTU Controller";
+  })();
 
   const refreshData = async () => {
     try {
@@ -82,11 +110,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ]);
       setOverview(ovData);
       setPonds(pData);
+      setLastUpdated(new Date());
+      setApiError(null);
       if (ovData?.active_alerts_count !== undefined) {
         setActiveAlertsCount(ovData.active_alerts_count);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Could not refresh live data from backend:", e);
+      setApiError(e?.message || "Backend service unreachable");
     }
   };
 
@@ -124,6 +155,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           try {
             const data = JSON.parse(event.data);
             if (data.type === "TELEMETRY_UPDATE") {
+              setLastUpdated(new Date());
               if (data.is_offline !== undefined) {
                 setIsOffline(data.is_offline);
                 setOfflineQueueCount(data.offline_queue_count || 0);
@@ -212,6 +244,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         offlineQueueCount,
         setOfflineQueueCount,
         wsStatus,
+        operatingState,
+        lastUpdated,
+        dataSource,
+        gatewayStatus,
+        apiError,
+        isHardwareConnected,
         currentUser,
         setCurrentUser,
         overview,

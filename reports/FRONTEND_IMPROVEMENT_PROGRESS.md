@@ -10,8 +10,8 @@
 
 | Task | Name | Status | Commit Hash | Push Status | Build / Validation |
 | :---: | :--- | :---: | :---: | :---: | :---: |
-| **1** | Environment-Based API & WebSocket Connectivity | **COMPLETED** | *Pending* | *Pending* | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
-| **2** | Live Data, Demo Data & Offline State Separation | *Pending* | — | — | — |
+| **1** | Environment-Based API & WebSocket Connectivity | **COMPLETED** | `670b7c5` | **PUSHED** | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
+| **2** | Live Data, Demo Data & Offline State Separation | **COMPLETED** | *Pending* | *Pending* | TypeScript: 0 errors, Build: OK, Lint: 0 errors |
 | **3** | Complete Responsive Design (Desktop, Tablet, Mobile) | *Pending* | — | — | — |
 | **4** | Farmer-First Command Center Dashboard Redesign | *Pending* | — | — | — |
 | **5** | Autonomous Engine & Equipment Control Safety | *Pending* | — | — | — |
@@ -50,4 +50,28 @@
   - `npm run lint`: 0 errors.
   - Grep search for `localhost`: 0 hardcoded references in pages/services (only defaults in `env.ts`).
 - **Commit:** `fix(frontend): configure environment-based API and WebSocket connectivity`
+- **Push Status:** `670b7c5` (Pushed to main)
+
+### Task 2: Live Data, Demo Data & Offline State Separation
+- **Implementation Summary:**
+  - Implemented explicit operating state machine in `AppContext.tsx`: `LIVE`, `DEMO`, `OFFLINE`, `CACHED`, `CONNECTING`, `ERROR`.
+  - Added telemetry freshness tracking: real-time `secondsAgo` relative counter with `lastUpdated` timestamp.
+  - Added explicit `dataSource` metadata ("Deterministic Coastal Aquaculture Simulation Engine" vs "Local Gateway Flash Buffer" vs "Modbus RS485 Submerged Probes").
+  - Updated `Navbar.tsx` with dynamic multi-state badge (Live stream with pulse beacon, Demo badge with flask icon, Offline buffer with queue count, Cached data badge with database icon, Link error badge).
+  - Added dismissible simulation warning banner in `Navbar.tsx` clearly communicating to the farmer that synthetic telemetry is active and physical hardware is not connected.
+  - Updated `Dashboard.tsx` with top data source info strip and stale probe fault badges (`⚠️ STALE / SENSOR PROBE FAULT`).
+  - Updated `WaterQuality.tsx` to display real-time data source and operating state in table header.
+  - Updated `IoTDevices.tsx` with simulation banner and stale node indicator (`> 60s ago -> Stale Telemetry`).
+- **Files Modified:**
+  - `frontend/src/context/AppContext.tsx`
+  - `frontend/src/components/Navbar.tsx`
+  - `frontend/src/pages/Dashboard.tsx`
+  - `frontend/src/pages/WaterQuality.tsx`
+  - `frontend/src/pages/IoTDevices.tsx`
+  - `reports/FRONTEND_IMPROVEMENT_PROGRESS.md`
+- **Validation:**
+  - `npm run build`: Success (`tsc -b && vite build` built in 465ms, 0 errors).
+  - `npm run lint`: 0 errors.
+- **Commit:** `fix(frontend): separate live demo and offline data states`
 - **Push Status:** In progress.
+

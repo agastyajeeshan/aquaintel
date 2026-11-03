@@ -14,10 +14,24 @@ import {
   UtensilsCrossed,
   Bot,
   Network,
+  Database,
+  Clock,
+  AlertOctagon,
 } from "lucide-react";
 
 export const Dashboard: React.FC = () => {
-  const { overview, ponds, navigateToPondDetail, setActivePage, isOffline, offlineQueueCount, setIsSimulateModalOpen } = useApp();
+  const {
+    overview,
+    ponds,
+    navigateToPondDetail,
+    setActivePage,
+    isOffline,
+    offlineQueueCount,
+    setIsSimulateModalOpen,
+    operatingState,
+    dataSource,
+    lastUpdated,
+  } = useApp();
 
   return (
     <div className="space-y-6">
@@ -52,9 +66,26 @@ export const Dashboard: React.FC = () => {
               Nellore Cluster
             </span>
           </div>
-          <p className="text-xs text-[#68776F] font-medium mt-1">
-            10-Hectare <span className="italic">Penaeus vannamei</span> Semi-Intensive Facility • Coastal Delta Basin
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-[#68776F]">
+            <span>10-Hectare <span className="italic">Penaeus vannamei</span> Facility • Coastal Delta</span>
+            <span>•</span>
+            <span className="inline-flex items-center gap-1 font-medium text-[#172820]">
+              <Database className="h-3 w-3 text-[#168B91]" />
+              <span className="truncate max-w-[280px]" title={dataSource}>{dataSource}</span>
+            </span>
+            <span>•</span>
+            <span
+              className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                operatingState === "LIVE"
+                  ? "bg-[#E3F3E9] text-[#247653]"
+                  : operatingState === "DEMO"
+                  ? "bg-[#F5F3FF] text-[#6D28D9]"
+                  : "bg-[#FEF7EC] text-[#B7791F]"
+              }`}
+            >
+              STATE: {operatingState}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center space-x-2.5">
@@ -305,8 +336,14 @@ export const Dashboard: React.FC = () => {
                 </div>
 
                 {p.active_event && (
-                  <div className="mb-2 px-2 py-0.5 bg-[#FDF2F2] border border-[#F7C8C8] rounded-md text-[10px] font-bold text-[#C84040]">
-                    Sim: {p.active_event}
+                  <div
+                    className={`mb-2 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      p.active_event === "SENSOR_FAILURE"
+                        ? "bg-[#FEF2F2] border border-[#FECACA] text-[#DC2626]"
+                        : "bg-[#FDF2F2] border border-[#F7C8C8] text-[#C84040]"
+                    }`}
+                  >
+                    {p.active_event === "SENSOR_FAILURE" ? "⚠️ STALE / SENSOR PROBE FAULT" : `SIM: ${p.active_event}`}
                   </div>
                 )}
 

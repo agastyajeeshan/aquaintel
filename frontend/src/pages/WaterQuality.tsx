@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 export const WaterQuality: React.FC = () => {
-  const { ponds, navigateToPondDetail } = useApp();
+  const { ponds, navigateToPondDetail, operatingState, dataSource } = useApp();
   const [selectedParam, setSelectedParam] = useState<string>("all");
 
   const thresholds = [
@@ -55,12 +55,20 @@ export const WaterQuality: React.FC = () => {
             <h2 className="text-sm font-extrabold text-[#172820]">
               Fleet Real-Time Telemetry Matrix
             </h2>
-            <p className="text-xs text-[#68776F]">
-              Direct optical sensor measurements refreshed via LoRa IN865 gateways
+            <p className="text-xs text-[#68776F] flex items-center gap-1.5 mt-0.5">
+              <span>Source: <strong className="text-[#172820]">{dataSource}</strong></span>
+              <span>•</span>
+              <span>State: <strong className={operatingState === "LIVE" ? "text-[#247653]" : "text-[#7C3AED]"}>{operatingState}</strong></span>
             </p>
           </div>
-          <span className="badge-soft-success text-xs px-2.5 py-0.5">
-            10 Ponds Online
+          <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+            operatingState === "LIVE"
+              ? "badge-soft-success"
+              : operatingState === "DEMO"
+              ? "bg-[#F5F3FF] text-[#6D28D9] border border-[#DDD6FE]"
+              : "badge-soft-warning"
+          }`}>
+            {operatingState} ({ponds.length} Ponds)
           </span>
         </div>
 
