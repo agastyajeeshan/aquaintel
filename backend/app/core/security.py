@@ -58,6 +58,8 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
             user = db.query(User).filter(User.username == username).first()
             if user is None:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+            if not user.is_active:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is deactivated")
             return user
         except JWTError:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials")
@@ -74,9 +76,24 @@ def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session 
         headers={"WWW-Authenticate": "Bearer"}
     )
 
+def get_current_user_optional(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
+    """
+    Optional user dependency: returns authenticated user if a valid token is provided, otherwise None.
+    """
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        username: str = payload.get("sub")
+        if not username:
+            return None
+        return db.query(User).filter(User.username == username).first()
+    except JWTError:
+        return None
+
 def require_roles(allowed_roles: List[str]):
     def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role not in allowed_roles and "ADMIN" not in allowed_roles:
+        if current_user.role not in allowed_roles and current_user.role != "ADMIN":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Operation not permitted. Required roles: {allowed_roles}"

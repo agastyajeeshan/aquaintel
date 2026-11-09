@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from .config import settings
 
@@ -14,6 +14,18 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
+def ensure_schema_migrations():
+    """Applies additive column migrations for SQLite / relational databases."""
+    try:
+        with engine.begin() as conn:
+            # Check users table columns
+            result = conn.execute(text("PRAGMA table_info(users)"))
+            cols = [row[1] for row in result.fetchall()]
+            if cols and "farm_id" not in cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN farm_id INTEGER REFERENCES farms(id)"))
+    except Exception:
+        pass
 
 def get_db():
     db = SessionLocal()

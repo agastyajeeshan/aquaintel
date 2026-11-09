@@ -1,11 +1,12 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Aerator, AerationEvent, Pond
+from ..models import Aerator, AerationEvent, Pond, User, AuditLog
 from ..schemas import AeratorCommand
 from ..core.aeration_engine import aeration_controller
 from ..core.iot_simulator import iot_simulator
+from ..core.security import get_current_user
 
 router = APIRouter(prefix="/aeration", tags=["Aeration"])
 
@@ -78,7 +79,15 @@ def get_aeration_status(db: Session = Depends(get_db)):
     }
 
 @router.post("/{aerator_id}/control")
-def control_aerator(aerator_id: int, cmd: AeratorCommand, db: Session = Depends(get_db)):
+def control_aerator(
+    aerator_id: int,
+    cmd: AeratorCommand,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER", "OPERATOR"]:
+        raise HTTPException(status_code=403, detail="Not authorized to operate aerators")
+
     aerator = db.query(Aerator).filter(Aerator.id == aerator_id).first()
     if not aerator:
         raise HTTPException(status_code=404, detail="Aerator not found")
@@ -90,18 +99,20 @@ def control_aerator(aerator_id: int, cmd: AeratorCommand, db: Session = Depends(
     if cmd.action == "START":
         new_status = "RUNNING"
         aerator.mode = "MANUAL"
-        trigger_msg = "Manual start override triggered by operator."
+        trigger_msg = f"Manual start override triggered by {current_user.full_name or current_user.username}."
     elif cmd.action == "STOP":
         new_status = "STANDBY"
         aerator.mode = "MANUAL"
-        trigger_msg = "Manual stop command issued."
+        trigger_msg = f"Manual stop command issued by {current_user.full_name or current_user.username}."
     elif cmd.action == "EMERGENCY_OVERRIDE":
         new_status = "RUNNING"
         aerator.mode = "EMERGENCY"
-        trigger_msg = "EMERGENCY OVERRIDE: Forced full throttle operation."
+        trigger_msg = f"EMERGENCY OVERRIDE: Forced full throttle operation by {current_user.full_name or current_user.username}."
     elif cmd.action == "AUTO":
         aerator.mode = "SMART_HYSTERESIS"
         trigger_msg = "Switched to automated smart hysteresis algorithm."
+    else:
+        trigger_msg = f"Actuator command {cmd.action} applied."
 
     aerator.status = new_status
     aerator.last_state_change = now
@@ -116,6 +127,14 @@ def control_aerator(aerator_id: int, cmd: AeratorCommand, db: Session = Depends(
         timestamp=now
     )
     db.add(event)
+    db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
+        action="AERATOR_COMMAND",
+        resource_type="AERATOR",
+        resource_id=str(aerator.id),
+        details={"action": action_name, "pond_id": aerator.pond_id, "mode": aerator.mode}
+    ))
     db.commit()
     db.refresh(aerator)
 

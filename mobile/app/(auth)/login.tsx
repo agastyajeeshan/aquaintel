@@ -22,8 +22,8 @@ export default function LoginScreen() {
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
 
-  const [username, setUsername] = useState('operator');
-  const [password, setPassword] = useState('operator123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
 
   const handleLogin = async () => {
     if (!username.trim() || !password) return;

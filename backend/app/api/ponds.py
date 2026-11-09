@@ -1,19 +1,29 @@
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Pond, Sensor, SensorReading, Feeder, Aerator, Alert, DiseasePrediction, AuditLog, Farm
+from ..models import Pond, Sensor, SensorReading, Feeder, Aerator, Alert, DiseasePrediction, AuditLog, Farm, User
 from ..schemas import PondCreateRequest, PondUpdateRequest
 from ..core.iot_simulator import iot_simulator
-from ..core.security import get_current_user, require_roles
+from ..core.security import get_current_user, get_current_user_optional, require_roles
 
 router = APIRouter(prefix="/ponds", tags=["Ponds"])
 
 @router.get("")
-def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(get_db)):
+def get_all_ponds(
+    include_archived: bool = Query(False),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     query = db.query(Pond)
     if not include_archived:
         query = query.filter((Pond.is_archived == False) | (Pond.is_archived == None))
+
+    # Cross-farm filtering for authenticated non-admin users
+    if current_user and current_user.role != "ADMIN" and current_user.farm_id is not None:
+        query = query.filter(Pond.farm_id == current_user.farm_id)
+
     ponds = query.order_by(Pond.pond_number).all()
     result = []
     
@@ -86,11 +96,17 @@ def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(g
 def get_pond_detail(
     pond_id: int,
     time_range: str = Query("24h", pattern="^(24h|7d|30d)$"),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     pond = db.query(Pond).filter(Pond.id == pond_id).first()
     if not pond:
         raise HTTPException(status_code=404, detail="Pond not found")
+
+    # Cross-farm authorization check
+    if current_user and current_user.role != "ADMIN" and current_user.farm_id is not None:
+        if pond.farm_id != current_user.farm_id:
+            raise HTTPException(status_code=403, detail="Cross-farm access forbidden: pond belongs to another farm")
 
     sim_data = iot_simulator.generate_current_pond_readings(pond.id)
 
@@ -214,13 +230,20 @@ def get_pond_detail(
     }
 
 @router.post("", status_code=201)
-def create_pond(req: PondCreateRequest, db: Session = Depends(get_db)):
+def create_pond(
+    req: PondCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER"]:
+        raise HTTPException(status_code=403, detail="Only administrators and farm managers can create ponds")
+
     existing = db.query(Pond).filter(Pond.pond_number == req.pond_number).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Pond with number {req.pond_number} already exists")
 
     farm = db.query(Farm).first()
-    farm_id = farm.id if farm else 1
+    farm_id = current_user.farm_id or (farm.id if farm else 1)
 
     new_pond = Pond(
         farm_id=farm_id,
@@ -283,6 +306,8 @@ def create_pond(req: PondCreateRequest, db: Session = Depends(get_db)):
 
     # Record Audit Log
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="POND_CREATED",
         resource_type="POND",
         resource_id=str(new_pond.id),
@@ -297,10 +322,22 @@ def create_pond(req: PondCreateRequest, db: Session = Depends(get_db)):
     }
 
 @router.patch("/{pond_id}")
-def update_pond(pond_id: int, req: PondUpdateRequest, db: Session = Depends(get_db)):
+def update_pond(
+    pond_id: int,
+    req: PondUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER"]:
+        raise HTTPException(status_code=403, detail="Only administrators and farm managers can modify ponds")
+
     pond = db.query(Pond).filter(Pond.id == pond_id).first()
     if not pond:
         raise HTTPException(status_code=404, detail="Pond not found")
+
+    # Cross-farm authorization check
+    if current_user.role != "ADMIN" and current_user.farm_id is not None and pond.farm_id != current_user.farm_id:
+        raise HTTPException(status_code=403, detail="Cross-farm modification forbidden: pond belongs to another farm")
 
     updated_fields = {}
     for field, val in req.model_dump(exclude_unset=True).items():
@@ -308,6 +345,8 @@ def update_pond(pond_id: int, req: PondUpdateRequest, db: Session = Depends(get_
         updated_fields[field] = val
 
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="POND_UPDATED",
         resource_type="POND",
         resource_id=str(pond.id),
@@ -322,13 +361,26 @@ def update_pond(pond_id: int, req: PondUpdateRequest, db: Session = Depends(get_
     }
 
 @router.delete("/{pond_id}")
-def archive_pond(pond_id: int, db: Session = Depends(get_db)):
+def archive_pond(
+    pond_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER"]:
+        raise HTTPException(status_code=403, detail="Only administrators and farm managers can archive ponds")
+
     pond = db.query(Pond).filter(Pond.id == pond_id).first()
     if not pond:
         raise HTTPException(status_code=404, detail="Pond not found")
 
+    # Cross-farm authorization check
+    if current_user.role != "ADMIN" and current_user.farm_id is not None and pond.farm_id != current_user.farm_id:
+        raise HTTPException(status_code=403, detail="Cross-farm archival forbidden: pond belongs to another farm")
+
     pond.is_archived = True
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="POND_ARCHIVED",
         resource_type="POND",
         resource_id=str(pond.id),

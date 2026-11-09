@@ -15,6 +15,7 @@ class User(Base):
     full_name = Column(String(100), nullable=True)
     role = Column(String(30), default="FARM_MANAGER")  # ADMIN, FARM_MANAGER, OPERATOR, VIEWER
     phone = Column(String(20), nullable=True)
+    farm_id = Column(Integer, ForeignKey("farms.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -552,6 +553,21 @@ class EdgeTelemetryBuffer(Base):
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
     is_synced = Column(Boolean, default=False, index=True)
     synced_batch_id = Column(String(64), nullable=True)
+
+class DevicePushToken(Base):
+    __tablename__ = "device_push_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    device_id = Column(String(100), nullable=True, index=True)
+    token = Column(String(255), unique=True, index=True, nullable=False)
+    platform = Column(String(30), default="android")  # android, ios, expo
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = relationship("User", backref="push_tokens")
+
 
 
 

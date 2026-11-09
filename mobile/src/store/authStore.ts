@@ -33,27 +33,27 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const response = await authApi.login(username, password);
       await secureStorage.setAccessToken(response.access_token);
       
-      const role = response.role as UserRole;
-      const userProfile: UserProfile = {
-        id: 1,
-        username: response.username,
-        full_name: response.full_name,
-        role: role,
-        email: `${response.username}@aquaintel.farm`,
-      };
+      let userProfile: UserProfile;
+      try {
+        userProfile = await authApi.getMe();
+      } catch {
+        const role = response.role as UserRole;
+        userProfile = {
+          id: 0,
+          username: response.username,
+          full_name: response.full_name,
+          role: role,
+          email: `${response.username}@aquaintel.io`,
+        };
+      }
 
       set({
         token: response.access_token,
-        role: role,
+        role: userProfile.role,
         user: userProfile,
         isAuthenticated: true,
         isLoading: false,
       });
-
-      // Try fetching richer profile in background
-      authApi.getMe().then((me) => {
-        set({ user: me, role: me.role });
-      }).catch(() => {});
 
       return true;
     } catch (err: any) {

@@ -14,10 +14,11 @@ from pydantic import BaseModel, Field
 from ..database import get_db
 from ..models import (
     FarmGateway, EdgeSyncBatch, RemoteCommandRecord, EdgeTelemetryBuffer,
-    Pond, Sensor, Aerator, Feeder, AuditLog
+    Pond, Sensor, Aerator, Feeder, AuditLog, User
 )
 from ..core.edge_gateway import edge_gateway
 from ..core.autonomous_engine import autonomous_engine
+from ..core.security import get_current_user
 
 router = APIRouter(prefix="/cloud", tags=["Edge-Cloud Hybrid Operations"])
 
@@ -101,6 +102,7 @@ def edge_heartbeat(
 @router.post("/remote-command")
 def issue_remote_command(
     req: RemoteCommandRequest,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
@@ -109,12 +111,13 @@ def issue_remote_command(
     - Sets command TTL expiration.
     - Dispatches to edge gateway with local safety supremacy interlock.
     """
-    # Role-Based Permission Check
+    # Role-Based Permission Check using authenticated user and requested role
     allowed_roles = ["ADMIN", "FARM_MANAGER", "OPERATOR"]
-    if req.user_role not in allowed_roles:
+    effective_role = req.user_role if (req.user_role and req.user_role != "ADMIN") else current_user.role
+    if effective_role not in allowed_roles or current_user.role not in allowed_roles:
         raise HTTPException(
             status_code=403,
-            detail=f"User role '{req.user_role}' is not authorized to issue remote physical actuator controls."
+            detail=f"User role '{effective_role}' is not authorized to issue remote physical actuator controls."
         )
 
     # Require confirmation flag for non-emergency commands
@@ -125,6 +128,7 @@ def issue_remote_command(
         )
 
     command_id = f"CMD-REMOTE-{uuid.uuid4().hex[:8].upper()}"
+    operator_name = current_user.full_name or req.operator_name or current_user.username
 
     success, msg, cmd_rec = edge_gateway.process_remote_command(
         db=db,
@@ -134,14 +138,15 @@ def issue_remote_command(
         equipment_type=req.equipment_type,
         action=req.action,
         parameters=req.parameters,
-        issued_by=req.operator_name or "Dr. K. Srinivas",
-        role=req.user_role,
+        issued_by=operator_name,
+        role=effective_role,
         ttl_seconds=req.ttl_seconds or 120
     )
 
     # Audit Log
     db.add(AuditLog(
-        username=req.operator_name or "Dr. K. Srinivas",
+        user_id=current_user.id,
+        username=current_user.username,
         action="REMOTE_EQUIPMENT_COMMAND",
         resource_type="EQUIPMENT",
         resource_id=req.device_id,

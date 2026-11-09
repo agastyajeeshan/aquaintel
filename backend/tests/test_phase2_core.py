@@ -202,6 +202,9 @@ def test_actuator_command_lifecycle():
 
 def test_pond_crud_and_archival():
     """Verify creating a pond, updating metadata, and soft archival."""
+    from app.core.security import create_access_token
+    admin_token = create_access_token({"sub": "admin", "role": "ADMIN", "user_id": 1})
+    headers = {"Authorization": f"Bearer {admin_token}"}
     p_num = 99
     pond_id = None
     try:
@@ -212,7 +215,7 @@ def test_pond_crud_and_archival():
             "area_ha": 0.5,
             "shrimp_species": "Litopenaeus vannamei",
             "estimated_biomass_kg": 250.0
-        })
+        }, headers=headers)
         assert create_res.status_code == 201
         pond_id = create_res.json()["pond_id"]
 
@@ -220,12 +223,12 @@ def test_pond_crud_and_archival():
         patch_res = client.patch(f"/api/v1/ponds/{pond_id}", json={
             "estimated_biomass_kg": 320.0,
             "notes": "Optimal feeding tray clearance observed"
-        })
+        }, headers=headers)
         assert patch_res.status_code == 200
         assert patch_res.json()["updated_fields"]["estimated_biomass_kg"] == 320.0
 
         # Archive
-        del_res = client.delete(f"/api/v1/ponds/{pond_id}")
+        del_res = client.delete(f"/api/v1/ponds/{pond_id}", headers=headers)
         assert del_res.status_code == 200
 
         # Verify not listed in active ponds by default

@@ -1,12 +1,13 @@
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Feeder, FeedingLog, Pond
+from ..models import Feeder, FeedingLog, Pond, User, AuditLog
 from ..schemas import FeederCommand
 from ..core.feeding_engine import feeding_engine
 from ..core.iot_simulator import iot_simulator
+from ..core.security import get_current_user
 
 router = APIRouter(prefix="/feeding", tags=["Feeding"])
 
@@ -102,7 +103,15 @@ def calculate_recommendation(
     return result
 
 @router.post("/{feeder_id}/control")
-def control_feeder(feeder_id: int, cmd: FeederCommand, db: Session = Depends(get_db)):
+def control_feeder(
+    feeder_id: int,
+    cmd: FeederCommand,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER", "OPERATOR"]:
+        raise HTTPException(status_code=403, detail="Not authorized to operate feeders")
+
     feeder = db.query(Feeder).filter(Feeder.id == feeder_id).first()
     if not feeder:
         raise HTTPException(status_code=404, detail="Feeder not found")
@@ -116,7 +125,7 @@ def control_feeder(feeder_id: int, cmd: FeederCommand, db: Session = Depends(get
             feeder_id=feeder.id,
             amount_kg=cmd.amount_kg or 2.5,
             planned_amount_kg=cmd.amount_kg or 2.5,
-            reduction_reason="Manual actuator trigger initiated by operator.",
+            reduction_reason=f"Manual actuator trigger initiated by {current_user.full_name or current_user.username}.",
             do_at_feeding=6.2,
             temp_at_feeding=29.0,
             status="COMPLETED",
@@ -129,6 +138,14 @@ def control_feeder(feeder_id: int, cmd: FeederCommand, db: Session = Depends(get
         if cmd.schedule_time:
             feeder.next_feeding_time = cmd.schedule_time
 
+    db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
+        action="FEEDER_COMMAND",
+        resource_type="FEEDER",
+        resource_id=str(feeder.id),
+        details={"action": cmd.action, "pond_id": feeder.pond_id, "amount_kg": cmd.amount_kg}
+    ))
     db.commit()
     db.refresh(feeder)
     return {

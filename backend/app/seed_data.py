@@ -27,10 +27,10 @@ def seed_database(db: Session):
 
     # 1. Users
     users_data = [
-        User(username="admin", email="admin@aquaintel.io", hashed_password=hash_pw("admin123"), full_name="Dr. K. Srinivas (Agritech Director)", role="ADMIN", phone="+91 98480 11223"),
-        User(username="manager", email="manager@aquaintel.io", hashed_password=hash_pw("farm123"), full_name="V. Naresh (Farm General Manager)", role="FARM_MANAGER", phone="+91 98480 22334"),
-        User(username="operator", email="operator@aquaintel.io", hashed_password=hash_pw("operator123"), full_name="B. Venkat (Shift Field Lead)", role="OPERATOR", phone="+91 98480 33445"),
-        User(username="viewer", email="investor@aquaintel.io", hashed_password=hash_pw("viewer123"), full_name="Rajiv Menon (Aquaculture Analyst)", role="VIEWER", phone="+91 98480 44556")
+        User(username="admin", email="admin@aquaintel.io", hashed_password=hash_pw("admin123"), full_name="Dr. K. Srinivas (Agritech Director)", role="ADMIN", phone="+91 98480 11223", farm_id=1),
+        User(username="manager", email="manager@aquaintel.io", hashed_password=hash_pw("farm123"), full_name="V. Naresh (Farm General Manager)", role="FARM_MANAGER", phone="+91 98480 22334", farm_id=1),
+        User(username="operator", email="operator@aquaintel.io", hashed_password=hash_pw("operator123"), full_name="B. Venkat (Shift Field Lead)", role="OPERATOR", phone="+91 98480 33445", farm_id=1),
+        User(username="viewer", email="investor@aquaintel.io", hashed_password=hash_pw("viewer123"), full_name="Rajiv Menon (Aquaculture Analyst)", role="VIEWER", phone="+91 98480 44556", farm_id=1)
     ]
     db.add_all(users_data)
     db.commit()
