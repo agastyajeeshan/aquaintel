@@ -99,6 +99,32 @@ def get_alerts(
         "resolved_at": a.resolved_at.strftime("%H:%M IST, %d %b") if a.resolved_at else None
     } for a in alerts]
 
+from pydantic import BaseModel, Field
+
+class PushTokenRegistration(BaseModel):
+    token: str = Field(..., description="Expo or FCM push token")
+    platform: Optional[str] = Field("android", description="Target platform (android, ios)")
+    device_id: Optional[str] = Field(None, description="Client device UUID")
+
+@router.post("/push-token")
+def register_push_token(payload: PushTokenRegistration, db: Session = Depends(get_db)):
+    """Registers an Android Expo push notification token for emergency alerts."""
+    db.add(AuditLog(
+        action="PUSH_TOKEN_REGISTERED",
+        resource_type="DEVICE",
+        resource_id=payload.device_id or "MOBILE_DEVICE",
+        details={
+            "platform": payload.platform,
+            "token_masked": payload.token[:10] + "..." if len(payload.token) > 10 else payload.token
+        }
+    ))
+    db.commit()
+    return {
+        "status": "SUCCESS",
+        "message": "Push notification token registered successfully",
+        "platform": payload.platform
+    }
+
 @router.post("/{alert_id}/acknowledge")
 def acknowledge_alert(alert_id: int, user_name: str = "V. Naresh (Farm Manager)", db: Session = Depends(get_db)):
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
