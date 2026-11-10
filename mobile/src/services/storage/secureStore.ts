@@ -65,6 +65,10 @@ export const secureStorage = {
     await setItem(KEYS.PUSH_TOKEN, token);
   },
 
+  async removePushToken(): Promise<void> {
+    await deleteItem(KEYS.PUSH_TOKEN);
+  },
+
   async clearAllSession(): Promise<void> {
     await deleteItem(KEYS.ACCESS_TOKEN);
     await deleteItem(KEYS.USER_ROLE);

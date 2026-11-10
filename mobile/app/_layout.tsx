@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -20,6 +20,7 @@ const queryClient = new QueryClient({
 });
 
 export default function RootLayout() {
+  const router = useRouter();
   const restoreSession = useAuthStore((s) => s.restoreSession);
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setOnlineStatus = useFarmStore((s) => s.setOnlineStatus);
@@ -40,18 +41,43 @@ export default function RootLayout() {
       }
     });
 
-    // 3. Register for push notifications
-    notificationService.registerForPushNotificationsAsync();
+    // 3. Handle notification response taps (Foreground & Background deep linking)
+    const handleNotificationRoute = (data: any) => {
+      if (!data) return;
+      const pondId = data.pond_id ?? data.pondId;
+      if (pondId) {
+        router.push(`/ponds/${pondId}` as any);
+      } else {
+        router.push('/(tabs)/alerts' as any);
+      }
+    };
+
+    const responseSubscription = notificationService.addNotificationResponseReceivedListener(
+      (response) => {
+        const data = response?.notification?.request?.content?.data;
+        handleNotificationRoute(data);
+      }
+    );
+
+    // 4. Handle cold-launch from notification tap
+    notificationService.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        const data = response?.notification?.request?.content?.data;
+        handleNotificationRoute(data);
+      }
+    });
 
     return () => {
       unsubscribeNet();
+      responseSubscription.remove();
       telemetrySocket.disconnect();
     };
   }, []);
 
-  // Connect telemetry WebSocket when authenticated
+  // Connect telemetry WebSocket & register push tokens when authenticated
   useEffect(() => {
     if (isAuthenticated) {
+      notificationService.registerForPushNotificationsAsync();
       telemetrySocket.connect();
       const unsubscribeTelemetry = telemetrySocket.subscribe('telemetry_update', (packet: any) => {
         if (packet?.pond_id && packet?.metrics) {

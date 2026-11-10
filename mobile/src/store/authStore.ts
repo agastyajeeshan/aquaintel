@@ -3,6 +3,7 @@ import { UserProfile, UserRole } from '../types';
 import { authApi } from '../services/api/auth.api';
 import { secureStorage } from '../services/storage/secureStore';
 import { setOnUnauthorizedCallback } from '../services/api/client';
+import { notificationService } from '../services/notifications/notificationService';
 
 interface AuthState {
   user: UserProfile | null;
@@ -67,6 +68,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    try {
+      await notificationService.unregisterPushTokenAsync();
+    } catch (e) {
+      // Ignore notification unregister errors
+    }
     try {
       await authApi.logout();
     } catch (e) {

@@ -65,6 +65,22 @@ def create_or_deduplicate_alert(
     ))
     db.commit()
     db.refresh(new_alert)
+
+    # Dispatch real-time push notifications for urgent alerts
+    if severity in ["CRITICAL", "EMERGENCY", "WARNING", "HIGH"]:
+        try:
+            from ..core.notification_service import notification_service
+            notification_service.dispatch_push_to_devices(
+                db=db,
+                title=title,
+                body=description,
+                pond_id=pond_id,
+                alert_id=new_alert.id,
+                severity=severity
+            )
+        except Exception:
+            pass
+
     return new_alert
 
 @router.get("")
@@ -103,9 +119,57 @@ def get_alerts(
 from pydantic import BaseModel, Field
 
 class PushTokenRegistration(BaseModel):
-    token: str = Field(..., description="Expo or FCM push token")
+    token: str = Field(..., min_length=5, description="Expo or FCM push token")
     platform: Optional[str] = Field("android", description="Target platform (android, ios)")
     device_id: Optional[str] = Field(None, description="Client device UUID")
+
+class PushTokenDeactivation(BaseModel):
+    token: str = Field(..., min_length=5, description="Expo or FCM push token to deactivate")
+
+@router.delete("/push-token")
+def unregister_push_token(
+    payload: PushTokenDeactivation,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Deactivates an Android Expo push notification token upon user logout."""
+    existing = db.query(DevicePushToken).filter(
+        DevicePushToken.token == payload.token,
+        DevicePushToken.user_id == current_user.id
+    ).first()
+    if existing:
+        existing.is_active = False
+        existing.updated_at = datetime.utcnow()
+        db.add(AuditLog(
+            user_id=current_user.id,
+            username=current_user.username,
+            action="PUSH_TOKEN_UNREGISTERED",
+            resource_type="DEVICE",
+            resource_id=existing.device_id or "MOBILE_DEVICE",
+            details={"user_id": current_user.id, "token_masked": payload.token[:10] + "..." if len(payload.token) > 10 else payload.token}
+        ))
+        db.commit()
+        return {"status": "SUCCESS", "message": "Push token deactivated"}
+    return {"status": "SUCCESS", "message": "Token not found or already inactive"}
+
+@router.post("/test-push")
+def send_test_push(
+    pond_id: Optional[int] = 1,
+    severity: Optional[str] = "CRITICAL",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dispatches a test push notification to verify delivery channels and Android notification channels."""
+    from ..core.notification_service import notification_service
+    result = notification_service.dispatch_push_to_devices(
+        db=db,
+        title=f"AquaIntel Test Notification (Pond {pond_id or 1:02d})",
+        body=f"Push notification delivery verification for user {current_user.username} (Channel: {severity}).",
+        pond_id=pond_id,
+        severity=severity or "CRITICAL",
+        user_id=current_user.id
+    )
+    return result
 
 @router.post("/push-token")
 def register_push_token(

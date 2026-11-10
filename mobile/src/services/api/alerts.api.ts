@@ -39,4 +39,11 @@ export const alertsApi = {
     });
     return response.data;
   },
+
+  async unregisterPushToken(token: string): Promise<any> {
+    const response = await apiClient.delete('/alerts/push-token', {
+      data: { token },
+    });
+    return response.data;
+  },
 };
