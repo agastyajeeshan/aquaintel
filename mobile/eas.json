@@ -1,0 +1,44 @@
+{
+  "cli": {
+    "version": ">= 12.5.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:8000/api",
+        "EXPO_PUBLIC_WS_URL": "ws://10.0.2.2:8000/ws/telemetry",
+        "EXPO_PUBLIC_DEMO_MODE": "true"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://10.0.2.2:8000/api",
+        "EXPO_PUBLIC_WS_URL": "ws://10.0.2.2:8000/ws/telemetry",
+        "EXPO_PUBLIC_DEMO_MODE": "false"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://api.aquaintel.farm/api",
+        "EXPO_PUBLIC_WS_URL": "wss://api.aquaintel.farm/ws/telemetry",
+        "EXPO_PUBLIC_DEMO_MODE": "false"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

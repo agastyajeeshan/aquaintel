@@ -1,10 +1,12 @@
 from datetime import datetime, timezone
 from typing import Optional, List
-from fastapi import APIRouter, Depends, Body, Query
+from fastapi import APIRouter, Depends, Body, Query, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import FarmSettings, User, AuditLog, SensorReading, Alert
+from ..models import Farm, FarmSettings, User, AuditLog, SensorReading, Alert
 from ..core.iot_simulator import iot_simulator
+from ..core.security import get_current_user_optional
+from ..config import settings as app_settings
 
 router = APIRouter(prefix="/settings", tags=["Settings"])
 
@@ -31,13 +33,24 @@ DEFAULT_SETTINGS = {
 
 @router.get("")
 def get_farm_settings(db: Session = Depends(get_db)):
+    farm = db.query(Farm).first()
     setting_record = db.query(FarmSettings).filter(FarmSettings.setting_key == "thresholds").first()
-    if setting_record:
-        return setting_record.setting_value
-    return DEFAULT_SETTINGS
+    base_settings = dict(setting_record.setting_value) if setting_record else dict(DEFAULT_SETTINGS)
+    if farm:
+        base_settings["farm_name"] = farm.name
+        base_settings["location"] = farm.location
+        base_settings["total_area_ha"] = farm.total_area_ha
+        base_settings["total_ponds"] = farm.pond_count
+    return base_settings
 
 @router.put("")
-def update_farm_settings(payload: dict = Body(...), db: Session = Depends(get_db)):
+def update_farm_settings(
+    payload: dict = Body(...),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    if not app_settings.DEMO_MODE and (not current_user or current_user.role not in ["ADMIN", "FARM_MANAGER"]):
+        raise HTTPException(status_code=403, detail="Administrator or Farm Manager authentication required")
     setting_record = db.query(FarmSettings).filter(FarmSettings.setting_key == "thresholds").first()
     if not setting_record:
         setting_record = FarmSettings(farm_id=1, setting_key="thresholds", setting_value=payload)
@@ -46,6 +59,8 @@ def update_farm_settings(payload: dict = Body(...), db: Session = Depends(get_db
         setting_record.setting_value = payload
 
     db.add(AuditLog(
+        user_id=current_user.id if current_user else None,
+        username=current_user.username if current_user else None,
         action="SETTINGS_UPDATED",
         resource_type="SETTINGS",
         resource_id="thresholds",
@@ -55,7 +70,12 @@ def update_farm_settings(payload: dict = Body(...), db: Session = Depends(get_db
     return {"status": "SUCCESS", "settings": setting_record.setting_value}
 
 @router.get("/users")
-def get_users_list(db: Session = Depends(get_db)):
+def get_users_list(
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    if not app_settings.DEMO_MODE and (not current_user or current_user.role != "ADMIN"):
+        raise HTTPException(status_code=403, detail="Administrator authentication required")
     users = db.query(User).all()
     return [{
         "id": u.id,

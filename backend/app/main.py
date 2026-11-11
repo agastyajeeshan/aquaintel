@@ -37,8 +37,10 @@ from .api.cloud_edge import router as cloud_edge_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize database tables
+    # Initialize database tables & additive schema migrations
     Base.metadata.create_all(bind=engine)
+    from .database import ensure_schema_migrations
+    ensure_schema_migrations()
     db = SessionLocal()
     try:
         seed_database(db)

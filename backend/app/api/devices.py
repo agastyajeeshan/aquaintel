@@ -5,9 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import IoTDevice, DeviceCommand, AuditLog
+from ..models import IoTDevice, DeviceCommand, AuditLog, User
 from ..schemas import ActuatorCommandRequest, ActuatorCommandAckRequest
 from ..core.iot_simulator import iot_simulator
+from ..core.security import get_current_user
 
 router = APIRouter(prefix="/devices", tags=["IoT Devices"])
 
@@ -102,10 +103,19 @@ def add_device(
     return new_device
 
 @router.post("/{device_id}/commands", status_code=status.HTTP_201_CREATED)
-def issue_device_command(device_id: str, cmd: ActuatorCommandRequest, db: Session = Depends(get_db)):
+def issue_device_command(
+    device_id: str,
+    cmd: ActuatorCommandRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """
     Issues an actuator or edge controller command with expiration and idempotency (Section 12).
+    Requires authenticated operator, manager, or admin privileges.
     """
+    if current_user.role not in ["ADMIN", "FARM_MANAGER", "OPERATOR"]:
+        raise HTTPException(status_code=403, detail="Not authorized to issue device commands")
+
     device = db.query(IoTDevice).filter(IoTDevice.device_id == device_id).first()
     if not device:
         # Check if device is aerator/feeder code as fallback
@@ -134,6 +144,8 @@ def issue_device_command(device_id: str, cmd: ActuatorCommandRequest, db: Sessio
     )
     db.add(record)
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="DEVICE_COMMAND_ISSUED",
         resource_type="DEVICE",
         resource_id=device_id,

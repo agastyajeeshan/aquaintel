@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..models import Sensor, SensorReading, IngestedTelemetry, Pond, Alert
+from .alerts import create_or_deduplicate_alert
 from ..schemas import TelemetryIngestRequest
 from ..config import settings
 
@@ -105,16 +106,16 @@ def ingest_telemetry(payload: TelemetryIngestRequest, db: Session = Depends(get_
 
         # Generate alert if critical condition observed
         if stype == "do" and sval < 3.0:
-            db.add(Alert(
+            create_or_deduplicate_alert(
+                db=db,
                 pond_id=pond_id,
                 alert_type="LOW_DO",
                 severity="CRITICAL",
                 title=f"Critical Low DO in Pond {pond.pond_number:02d}: {sval} mg/L",
                 description=f"Dissolved oxygen dropped below critical threshold (3.0 mg/L) at {reading_timestamp.strftime('%H:%M:%S')}",
                 cause="Heavy respiratory biomass demand / poor circulation",
-                recommended_action="Emergency aeration boost triggered. Halt automated feeding.",
-                status="ACTIVE"
-            ))
+                recommended_action="Emergency aeration boost triggered. Halt automated feeding."
+            )
 
     # 4. Record ingested telemetry message for provenance
     db.add(IngestedTelemetry(

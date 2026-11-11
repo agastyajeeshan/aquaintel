@@ -1,19 +1,30 @@
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Pond, Sensor, SensorReading, Feeder, Aerator, Alert, DiseasePrediction, AuditLog, Farm
+from ..models import Pond, Sensor, SensorReading, Feeder, FeedingLog, Aerator, AerationEvent, Alert, DiseasePrediction, AuditLog, Farm, User
 from ..schemas import PondCreateRequest, PondUpdateRequest
 from ..core.iot_simulator import iot_simulator
-from ..core.security import get_current_user, require_roles
+from ..core.predictive_models import PondPredictiveEngine
+from ..core.security import get_current_user, get_current_user_optional, require_roles
 
 router = APIRouter(prefix="/ponds", tags=["Ponds"])
 
 @router.get("")
-def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(get_db)):
+def get_all_ponds(
+    include_archived: bool = Query(False),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
     query = db.query(Pond)
     if not include_archived:
         query = query.filter((Pond.is_archived == False) | (Pond.is_archived == None))
+
+    # Cross-farm filtering for authenticated non-admin users
+    if current_user and current_user.role != "ADMIN" and current_user.farm_id is not None:
+        query = query.filter(Pond.farm_id == current_user.farm_id)
+
     ponds = query.order_by(Pond.pond_number).all()
     result = []
     
@@ -42,6 +53,9 @@ def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(g
 
         # If simulated event is active, update status
         effective_status = sim_data["status"]
+        provenance = "DEMO" if sim_data.get("data_provenance") == "SYNTHETIC_SIMULATED" else "LIVE"
+        is_stale = bool(sim_data.get("is_stale", False))
+        reading_ts = sim_data.get("timestamp")
 
         result.append({
             "id": p.id,
@@ -57,6 +71,7 @@ def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(g
             "target_fcr": p.target_fcr,
             "status": effective_status,
             "active_event": sim_data.get("active_event"),
+            "provenance": "STALE" if is_stale else provenance,
             "water_quality": {
                 "do": sim_data["metrics"]["do"]["value"],
                 "ph": sim_data["metrics"]["ph"]["value"],
@@ -64,6 +79,10 @@ def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(g
                 "ammonia": sim_data["metrics"]["ammonia"]["value"],
                 "salinity": sim_data["metrics"]["salinity"]["value"],
                 "turbidity": sim_data["metrics"]["turbidity"]["value"],
+                "water_depth_m": sim_data["metrics"].get("water_level", {}).get("value"),
+                "stale": is_stale,
+                "last_updated": reading_ts,
+                "provenance": "STALE" if is_stale else provenance,
             },
             "aerator_summary": {
                 "active_count": active_aerators,
@@ -85,18 +104,24 @@ def get_all_ponds(include_archived: bool = Query(False), db: Session = Depends(g
 @router.get("/{pond_id}")
 def get_pond_detail(
     pond_id: int,
-    time_range: str = Query("24h", pattern="^(24h|7d|30d)$"),
+    time_range: str = Query("24h", pattern="^(6h|24h|7d|30d)$"),
+    current_user: Optional[User] = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
     pond = db.query(Pond).filter(Pond.id == pond_id).first()
     if not pond:
         raise HTTPException(status_code=404, detail="Pond not found")
 
+    # Cross-farm authorization check
+    if current_user and current_user.role != "ADMIN" and current_user.farm_id is not None:
+        if pond.farm_id != current_user.farm_id:
+            raise HTTPException(status_code=403, detail="Cross-farm access forbidden: pond belongs to another farm")
+
     sim_data = iot_simulator.generate_current_pond_readings(pond.id)
 
     # Calculate date range
     now = datetime.utcnow()
-    hours_map = {"24h": 24, "7d": 168, "30d": 720}
+    hours_map = {"6h": 6, "24h": 24, "7d": 168, "30d": 720}
     hours_back = hours_map.get(time_range, 24)
     start_time = now - timedelta(hours=hours_back)
 
@@ -188,6 +213,67 @@ def get_pond_detail(
         "created_at": al.created_at.isoformat()
     } for al in alerts]
 
+    # Sensors for this pond
+    sensors_rows = db.query(Sensor).filter(Sensor.pond_id == pond_id).all()
+    is_stale = bool(sim_data.get("is_stale", False))
+    provenance = "STALE" if is_stale else ("DEMO" if sim_data.get("data_provenance") == "SYNTHETIC_SIMULATED" else "LIVE")
+    sensor_offline = sim_data.get("sensor_health") == "OFFLINE"
+    sensors_data = [{
+        "id": s.id,
+        "device_id": s.device_id,
+        "sensor_type": s.sensor_type,
+        "model": s.model,
+        "unit": s.unit,
+        "current_value": sim_data["metrics"].get(s.sensor_type, {}).get("value", s.current_value),
+        "min_safe": s.min_safe,
+        "max_safe": s.max_safe,
+        "optimal_min": s.optimal_min,
+        "optimal_max": s.optimal_max,
+        "status": "OFFLINE" if sensor_offline else ("STALE" if is_stale else sim_data["metrics"].get(s.sensor_type, {}).get("status", s.status)),
+        "last_reading_at": sim_data.get("timestamp") or (s.last_reading_at.isoformat() if s.last_reading_at else None),
+        "is_stale": is_stale,
+        "provenance": provenance
+    } for s in sensors_rows]
+
+    # Feeding history & Aeration events for this pond
+    feeding_logs = db.query(FeedingLog).filter(FeedingLog.pond_id == pond_id).order_by(FeedingLog.timestamp.desc()).limit(10).all()
+    feeding_history = [{
+        "id": fl.id,
+        "amount_kg": fl.amount_kg,
+        "planned_amount_kg": fl.planned_amount_kg,
+        "reduction_reason": fl.reduction_reason,
+        "do_at_feeding": fl.do_at_feeding,
+        "temp_at_feeding": fl.temp_at_feeding,
+        "status": fl.status,
+        "timestamp": fl.timestamp.isoformat() if fl.timestamp else None
+    } for fl in feeding_logs]
+
+    aeration_logs = db.query(AerationEvent).filter(AerationEvent.pond_id == pond_id).order_by(AerationEvent.timestamp.desc()).limit(10).all()
+    aeration_events = [{
+        "id": ae.id,
+        "aerator_id": ae.aerator_id,
+        "action": ae.action,
+        "trigger_reason": ae.trigger_reason,
+        "trigger_do_level": ae.trigger_do_level,
+        "timestamp": ae.timestamp.isoformat() if ae.timestamp else None
+    } for ae in aeration_logs]
+
+    # Backend-calculated NH3 (Emerson-Trussell formulation)
+    m = sim_data["metrics"]
+    est_nh3 = PondPredictiveEngine.calculate_unionized_nh3(
+        tan_mg_l=m["ammonia"]["value"],
+        ph=m["ph"]["value"],
+        temp_c=m["temperature"]["value"],
+        salinity_ppt=m["salinity"]["value"]
+    )
+    enriched_metrics = dict(m)
+    enriched_metrics["estimated_nh3"] = {
+        "value": est_nh3,
+        "unit": "mg/L",
+        "status": "CRITICAL" if est_nh3 > 0.05 else ("WARNING" if est_nh3 > 0.025 else "NORMAL"),
+        "calculated": True
+    }
+
     return {
         "overview": {
             "id": pond.id,
@@ -202,25 +288,38 @@ def get_pond_detail(
             "survival_rate_pct": pond.survival_rate_pct,
             "target_fcr": pond.target_fcr,
             "status": sim_data["status"],
-            "active_event": sim_data.get("active_event")
+            "active_event": sim_data.get("active_event"),
+            "provenance": provenance,
+            "is_stale": is_stale,
+            "last_updated": sim_data.get("timestamp")
         },
-        "live_metrics": sim_data["metrics"],
+        "live_metrics": enriched_metrics,
+        "sensors": sensors_data,
         "chart_series": chart_series,
         "time_range": time_range,
         "aerators": aerators_data,
         "feeder": feeder_data,
+        "feeding_history": feeding_history,
+        "aeration_events": aeration_events,
         "disease_predictions": disease_data,
         "alerts": alerts_data
     }
 
 @router.post("", status_code=201)
-def create_pond(req: PondCreateRequest, db: Session = Depends(get_db)):
+def create_pond(
+    req: PondCreateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER"]:
+        raise HTTPException(status_code=403, detail="Only administrators and farm managers can create ponds")
+
     existing = db.query(Pond).filter(Pond.pond_number == req.pond_number).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Pond with number {req.pond_number} already exists")
 
     farm = db.query(Farm).first()
-    farm_id = farm.id if farm else 1
+    farm_id = current_user.farm_id or (farm.id if farm else 1)
 
     new_pond = Pond(
         farm_id=farm_id,
@@ -283,6 +382,8 @@ def create_pond(req: PondCreateRequest, db: Session = Depends(get_db)):
 
     # Record Audit Log
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="POND_CREATED",
         resource_type="POND",
         resource_id=str(new_pond.id),
@@ -297,10 +398,22 @@ def create_pond(req: PondCreateRequest, db: Session = Depends(get_db)):
     }
 
 @router.patch("/{pond_id}")
-def update_pond(pond_id: int, req: PondUpdateRequest, db: Session = Depends(get_db)):
+def update_pond(
+    pond_id: int,
+    req: PondUpdateRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER"]:
+        raise HTTPException(status_code=403, detail="Only administrators and farm managers can modify ponds")
+
     pond = db.query(Pond).filter(Pond.id == pond_id).first()
     if not pond:
         raise HTTPException(status_code=404, detail="Pond not found")
+
+    # Cross-farm authorization check
+    if current_user.role != "ADMIN" and current_user.farm_id is not None and pond.farm_id != current_user.farm_id:
+        raise HTTPException(status_code=403, detail="Cross-farm modification forbidden: pond belongs to another farm")
 
     updated_fields = {}
     for field, val in req.model_dump(exclude_unset=True).items():
@@ -308,6 +421,8 @@ def update_pond(pond_id: int, req: PondUpdateRequest, db: Session = Depends(get_
         updated_fields[field] = val
 
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="POND_UPDATED",
         resource_type="POND",
         resource_id=str(pond.id),
@@ -322,13 +437,26 @@ def update_pond(pond_id: int, req: PondUpdateRequest, db: Session = Depends(get_
     }
 
 @router.delete("/{pond_id}")
-def archive_pond(pond_id: int, db: Session = Depends(get_db)):
+def archive_pond(
+    pond_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if current_user.role not in ["ADMIN", "FARM_MANAGER"]:
+        raise HTTPException(status_code=403, detail="Only administrators and farm managers can archive ponds")
+
     pond = db.query(Pond).filter(Pond.id == pond_id).first()
     if not pond:
         raise HTTPException(status_code=404, detail="Pond not found")
 
+    # Cross-farm authorization check
+    if current_user.role != "ADMIN" and current_user.farm_id is not None and pond.farm_id != current_user.farm_id:
+        raise HTTPException(status_code=403, detail="Cross-farm archival forbidden: pond belongs to another farm")
+
     pond.is_archived = True
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="POND_ARCHIVED",
         resource_type="POND",
         resource_id=str(pond.id),

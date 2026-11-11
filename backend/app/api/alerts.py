@@ -3,7 +3,8 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Alert, AuditLog
+from ..models import Alert, AuditLog, User, DevicePushToken
+from ..core.security import get_current_user
 
 router = APIRouter(prefix="/alerts", tags=["Alerts"])
 
@@ -64,6 +65,22 @@ def create_or_deduplicate_alert(
     ))
     db.commit()
     db.refresh(new_alert)
+
+    # Dispatch real-time push notifications for urgent alerts
+    if severity in ["CRITICAL", "EMERGENCY", "WARNING", "HIGH"]:
+        try:
+            from ..core.notification_service import notification_service
+            notification_service.dispatch_push_to_devices(
+                db=db,
+                title=title,
+                body=description,
+                pond_id=pond_id,
+                alert_id=new_alert.id,
+                severity=severity
+            )
+        except Exception:
+            pass
+
     return new_alert
 
 @router.get("")
@@ -99,41 +116,167 @@ def get_alerts(
         "resolved_at": a.resolved_at.strftime("%H:%M IST, %d %b") if a.resolved_at else None
     } for a in alerts]
 
+from pydantic import BaseModel, Field
+
+class PushTokenRegistration(BaseModel):
+    token: str = Field(..., min_length=5, description="Expo or FCM push token")
+    platform: Optional[str] = Field("android", description="Target platform (android, ios)")
+    device_id: Optional[str] = Field(None, description="Client device UUID")
+
+class PushTokenDeactivation(BaseModel):
+    token: str = Field(..., min_length=5, description="Expo or FCM push token to deactivate")
+
+@router.delete("/push-token")
+def unregister_push_token(
+    payload: PushTokenDeactivation,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Deactivates an Android Expo push notification token upon user logout."""
+    existing = db.query(DevicePushToken).filter(
+        DevicePushToken.token == payload.token,
+        DevicePushToken.user_id == current_user.id
+    ).first()
+    if existing:
+        existing.is_active = False
+        existing.updated_at = datetime.utcnow()
+        db.add(AuditLog(
+            user_id=current_user.id,
+            username=current_user.username,
+            action="PUSH_TOKEN_UNREGISTERED",
+            resource_type="DEVICE",
+            resource_id=existing.device_id or "MOBILE_DEVICE",
+            details={"user_id": current_user.id, "token_masked": payload.token[:10] + "..." if len(payload.token) > 10 else payload.token}
+        ))
+        db.commit()
+        return {"status": "SUCCESS", "message": "Push token deactivated"}
+    return {"status": "SUCCESS", "message": "Token not found or already inactive"}
+
+@router.post("/test-push")
+def send_test_push(
+    pond_id: Optional[int] = 1,
+    severity: Optional[str] = "CRITICAL",
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Dispatches a test push notification to verify delivery channels and Android notification channels."""
+    from ..core.notification_service import notification_service
+    result = notification_service.dispatch_push_to_devices(
+        db=db,
+        title=f"AquaIntel Test Notification (Pond {pond_id or 1:02d})",
+        body=f"Push notification delivery verification for user {current_user.username} (Channel: {severity}).",
+        pond_id=pond_id,
+        severity=severity or "CRITICAL",
+        user_id=current_user.id
+    )
+    return result
+
+@router.post("/push-token")
+def register_push_token(
+    payload: PushTokenRegistration,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Registers an Android Expo push notification token for emergency alerts, linked to authenticated user."""
+    # Upsert token into device_push_tokens table
+    existing = db.query(DevicePushToken).filter(DevicePushToken.token == payload.token).first()
+    if existing:
+        existing.user_id = current_user.id
+        existing.device_id = payload.device_id or existing.device_id
+        existing.platform = payload.platform or existing.platform
+        existing.is_active = True
+        existing.updated_at = datetime.utcnow()
+    else:
+        new_token = DevicePushToken(
+            user_id=current_user.id,
+            device_id=payload.device_id or "MOBILE_DEVICE",
+            token=payload.token,
+            platform=payload.platform or "android",
+            is_active=True
+        )
+        db.add(new_token)
+
+    db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
+        action="PUSH_TOKEN_REGISTERED",
+        resource_type="DEVICE",
+        resource_id=payload.device_id or "MOBILE_DEVICE",
+        details={
+            "platform": payload.platform,
+            "user_id": current_user.id,
+            "token_masked": payload.token[:10] + "..." if len(payload.token) > 10 else payload.token
+        }
+    ))
+    db.commit()
+    return {
+        "status": "SUCCESS",
+        "message": "Push notification token registered successfully",
+        "platform": payload.platform,
+        "user_id": current_user.id
+    }
+
 @router.post("/{alert_id}/acknowledge")
-def acknowledge_alert(alert_id: int, user_name: str = "V. Naresh (Farm Manager)", db: Session = Depends(get_db)):
+def acknowledge_alert(
+    alert_id: int,
+    user_name: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Acknowledges an alert with role-based authorization check."""
+    if current_user.role not in ["ADMIN", "FARM_MANAGER", "OPERATOR"]:
+        raise HTTPException(status_code=403, detail="Not authorized to acknowledge alerts")
+
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
+
+    effective_name = user_name or current_user.full_name or current_user.username
     alert.status = "ACKNOWLEDGED"
-    alert.acknowledged_by = user_name
+    alert.acknowledged_by = effective_name
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="ALERT_ACKNOWLEDGED",
         resource_type="ALERT",
         resource_id=str(alert.id),
-        details={"acknowledged_by": user_name}
+        details={"acknowledged_by": effective_name, "user_id": current_user.id}
     ))
     db.commit()
     db.refresh(alert)
-    return {"status": "SUCCESS", "alert_id": alert.id, "new_status": alert.status}
+    return {"status": "SUCCESS", "alert_id": alert.id, "new_status": alert.status, "acknowledged_by": effective_name}
 
 @router.post("/{alert_id}/resolve")
-def resolve_alert(alert_id: int, user_name: str = "B. Venkat (Shift Field Lead)", db: Session = Depends(get_db)):
+def resolve_alert(
+    alert_id: int,
+    user_name: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Resolves an alert with role-based authorization check."""
+    if current_user.role not in ["ADMIN", "FARM_MANAGER", "OPERATOR"]:
+        raise HTTPException(status_code=403, detail="Not authorized to resolve alerts")
+
     alert = db.query(Alert).filter(Alert.id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
+
+    effective_name = user_name or current_user.full_name or current_user.username
     now = datetime.now(timezone.utc)
     alert.status = "RESOLVED"
-    alert.resolved_by = user_name
+    alert.resolved_by = effective_name
     alert.resolved_at = now
     db.add(AuditLog(
+        user_id=current_user.id,
+        username=current_user.username,
         action="ALERT_RESOLVED",
         resource_type="ALERT",
         resource_id=str(alert.id),
-        details={"resolved_by": user_name}
+        details={"resolved_by": effective_name, "user_id": current_user.id}
     ))
     db.commit()
     db.refresh(alert)
-    return {"status": "SUCCESS", "alert_id": alert.id, "new_status": alert.status}
+    return {"status": "SUCCESS", "alert_id": alert.id, "new_status": alert.status, "resolved_by": effective_name}
 
 @router.post("/{alert_id}/ignore")
 def ignore_alert(alert_id: int, db: Session = Depends(get_db)):
