@@ -12,16 +12,18 @@ import {
 import { useRouter } from 'expo-router';
 import { feedingApi, FeedingStatusResponse } from '../../src/services/api/feeding.api';
 import { useFarmStore } from '../../src/store/farmStore';
+import { useAuthStore } from '../../src/store/authStore';
 import { theme } from '../../src/theme';
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { MetricCard } from '../../src/components/common/MetricCard';
 import { ConfirmationDialog } from '../../src/components/common/ConfirmationDialog';
 import { LoadingState, ErrorState } from '../../src/components/common/FeedbackStates';
-import { Utensils, Play, Calculator, AlertTriangle, Clock } from 'lucide-react-native';
+import { Utensils, Play, Calculator, AlertTriangle, Clock, History } from 'lucide-react-native';
 
 export default function FeedingScreen() {
   const router = useRouter();
   const { isOnline, operatingMode, ponds } = useFarmStore();
+  const user = useAuthStore((s) => s.user);
 
   const [feedingData, setFeedingData] = useState<FeedingStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -75,21 +77,35 @@ export default function FeedingScreen() {
     loadData();
   };
 
-  const handleOpenBurst = (feeder: any) => {
-    if (!isOnline) {
-      Alert.alert('Offline Action Blocked', 'Feeding actuation is disabled while offline.');
-      return;
-    }
-
+  const getBlockReason = (feeder: any): string | null => {
+    if (!isOnline) return 'Offline: remote feeding actions are disabled and never queued.';
+    if (user?.role === 'VIEWER') return 'Read-only role cannot trigger feeding equipment.';
+    if (feeder.is_blocked && feeder.block_reason) return feeder.block_reason;
     const pond = ponds.find((p) => p.id === feeder.pond_id);
-    const pondDo = pond?.water_quality.do ?? 6.0;
-
-    // Safety Interlock Check: Lockout if DO < 4.0 mg/L
+    const pondDo = feeder.pond_do ?? pond?.water_quality?.do;
+    const isStale = feeder.is_stale ?? pond?.water_quality?.stale;
+    if (feeder.sensor_health === 'OFFLINE' || isStale) {
+      return 'Required pond DO sensor is offline or stale.';
+    }
+    if (pondDo === undefined || pondDo === null) {
+      return 'Pond dissolved oxygen telemetry is unavailable.';
+    }
     if (pondDo < 4.0) {
-      Alert.alert(
-        'Feeding Lockout Interlock',
-        `Cannot dispense feed: Pond DO is ${pondDo.toFixed(2)} mg/L (Minimum safe DO for feeding is 4.00 mg/L). Shrimps stop metabolizing in hypoxic conditions.`
-      );
+      return `Safety lockout: Pond DO is ${pondDo.toFixed(2)} mg/L (< 4.00 mg/L minimum).`;
+    }
+    if ((feeder.pond_ammonia ?? pond?.water_quality?.ammonia ?? 0) > 0.10) {
+      return 'Ammonia safety lockout: Pond TAN exceeds 0.100 mg/L.';
+    }
+    if (feeder.daily_quota_kg && feeder.dispensed_today_kg >= feeder.daily_quota_kg) {
+      return 'Daily quota already reached.';
+    }
+    return null;
+  };
+
+  const handleOpenBurst = (feeder: any) => {
+    const reason = getBlockReason(feeder);
+    if (reason) {
+      Alert.alert('Feeding Action Blocked', reason);
       return;
     }
 
@@ -142,7 +158,7 @@ export default function FeedingScreen() {
     <View style={styles.container}>
       <AppHeader
         title="Smart Feeding Fleet"
-        subtitle="10 Auto-Feeders • Biomass Demand"
+        subtitle={`${feedingData?.feeders?.length ?? '—'} Auto-Feeders • Biomass Demand`}
         provenance={operatingMode}
         showBack
         onBack={() => router.back()}
@@ -286,11 +302,16 @@ export default function FeedingScreen() {
           )}
 
           {/* Feeder Fleet List */}
-          <View style={styles.sectionHeader}>
+          <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Pond Feeder Fleet</Text>
+            <TouchableOpacity onPress={() => router.push('/feeding/history' as any)}>
+              <Text style={styles.historyLink}>View Feeding History →</Text>
+            </TouchableOpacity>
           </View>
 
-          {feedingData?.feeders?.map((f) => (
+          {feedingData?.feeders?.map((f) => {
+            const blockReason = getBlockReason(f);
+            return (
             <View key={f.id} style={styles.feederCard}>
               <View style={styles.feederTop}>
                 <View>
@@ -348,6 +369,15 @@ export default function FeedingScreen() {
                 </View>
               )}
 
+              {blockReason && (
+                <View style={styles.reductionWarning}>
+                  <AlertTriangle size={13} color={theme.colors.critical} />
+                  <Text style={[styles.reductionText, { color: theme.colors.critical, flex: 1 }]}>
+                    Blocked: {blockReason}
+                  </Text>
+                </View>
+              )}
+
               <View style={styles.feederFooter}>
                 <View style={styles.nextSchedule}>
                   <Clock size={13} color={theme.colors.textSecondary} />
@@ -355,15 +385,16 @@ export default function FeedingScreen() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.dispenseBtn}
+                  style={[styles.dispenseBtn, blockReason && { backgroundColor: theme.colors.textMuted }]}
                   onPress={() => handleOpenBurst(f)}
                 >
                   <Play size={12} color="#FFFFFF" />
-                  <Text style={styles.dispenseBtnText}>Manual Burst</Text>
+                  <Text style={styles.dispenseBtnText}>{blockReason ? 'Blocked' : 'Manual Burst'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          ))}
+            );
+          })}
         </ScrollView>
       )}
 
@@ -502,6 +533,18 @@ const styles = StyleSheet.create({
   sectionHeader: {
     marginTop: theme.spacing.sm,
     marginBottom: theme.spacing.sm,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: theme.spacing.sm,
+    marginBottom: theme.spacing.sm,
+  },
+  historyLink: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: theme.colors.primary,
   },
   sectionTitle: {
     fontSize: 15,

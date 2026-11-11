@@ -1,9 +1,16 @@
 import React from 'react';
+import { Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 import { StatusBadge } from '../../src/components/common/StatusBadge';
 import { MetricCard } from '../../src/components/common/MetricCard';
 import { ConfirmationDialog } from '../../src/components/common/ConfirmationDialog';
 import { SensorStatusCard } from '../../src/components/common/SensorStatusCard';
+import { ChartCard } from '../../src/components/common/ChartCard';
+import { BottomNavigation } from '../../src/components/common/BottomNavigation';
+
+jest.mock('react-native-safe-area-context', () => ({
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
 
 describe('Common UI Component Tests', () => {
   describe('StatusBadge Component', () => {
@@ -113,6 +120,97 @@ describe('Common UI Component Tests', () => {
 
       expect(getByText('3.20')).toBeTruthy();
       expect(getByText('CRITICAL')).toBeTruthy();
+    });
+
+    test('renders unavailable reading cleanly without fabricated fallback', () => {
+      const { getByText } = render(
+        <SensorStatusCard parameter="do" value={null} sensorId="S-P1-DO" />
+      );
+
+      expect(getByText('—')).toBeTruthy();
+      expect(getByText('UNAVAILABLE')).toBeTruthy();
+    });
+
+    test('renders stale water_level with SIMULATED provenance and advisory target', () => {
+      const { getByText } = render(
+        <SensorStatusCard
+          parameter="water_level"
+          value={1.32}
+          provenance="SIMULATED"
+          isStale={true}
+          secondsAgo={180}
+        />
+      );
+
+      expect(getByText('1.32')).toBeTruthy();
+      expect(getByText('SIMULATED')).toBeTruthy();
+      expect(getByText(/Advisory Target:/)).toBeTruthy();
+      expect(getByText('180s ago (stale)')).toBeTruthy();
+    });
+  });
+
+  describe('ChartCard Component', () => {
+    test('renders title, provenance, range selector chips, and fires onRangeChange', () => {
+      const onRangeChange = jest.fn();
+      const { getByText } = render(
+        <ChartCard
+          title="Dissolved Oxygen Trend"
+          subtitle="Hourly pond telemetry"
+          provenance="LIVE"
+          selectedRange="24h"
+          ranges={['6h', '24h', '7d']}
+          onRangeChange={onRangeChange}
+          footerNote="Emerson NH3 computed by backend"
+        >
+          <Text>Chart Body Placeholder</Text>
+        </ChartCard>
+      );
+
+      expect(getByText('Dissolved Oxygen Trend')).toBeTruthy();
+      expect(getByText('Hourly pond telemetry')).toBeTruthy();
+      expect(getByText('LIVE')).toBeTruthy();
+      expect(getByText('Chart Body Placeholder')).toBeTruthy();
+      expect(getByText('Emerson NH3 computed by backend')).toBeTruthy();
+
+      fireEvent.press(getByText('6H'));
+      expect(onRangeChange).toHaveBeenCalledWith('6h');
+    });
+  });
+
+  describe('BottomNavigation Component', () => {
+    test('renders tab items, formats 99+ badges, hides zero badges, and triggers onPress', () => {
+      const onDash = jest.fn();
+      const onAlerts = jest.fn();
+
+      const { getByText, queryByText } = render(
+        <BottomNavigation
+          activeKey="dashboard"
+          items={[
+            {
+              key: 'dashboard',
+              label: 'Dashboard',
+              icon: () => <Text>D</Text>,
+              badgeCount: 0,
+              onPress: onDash,
+            },
+            {
+              key: 'alerts',
+              label: 'Alerts',
+              icon: () => <Text>A</Text>,
+              badgeCount: 120,
+              onPress: onAlerts,
+            },
+          ]}
+        />
+      );
+
+      expect(getByText('Dashboard')).toBeTruthy();
+      expect(getByText('Alerts')).toBeTruthy();
+      expect(getByText('99+')).toBeTruthy();
+      expect(queryByText('0')).toBeNull();
+
+      fireEvent.press(getByText('Alerts'));
+      expect(onAlerts).toHaveBeenCalledTimes(1);
     });
   });
 });

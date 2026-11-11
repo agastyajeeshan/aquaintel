@@ -25,7 +25,7 @@ export interface AuthTokenResponse {
   full_name: string;
 }
 
-export type DataProvenance = "LIVE" | "DEMO" | "CACHED" | "OFFLINE" | "STALE" | "UNAVAILABLE";
+export type DataProvenance = "LIVE" | "DEMO" | "SIMULATED" | "CACHED" | "OFFLINE" | "STALE" | "UNAVAILABLE";
 
 export interface WaterQualityMetrics {
   do: number; // Dissolved Oxygen in mg/L (Target: 5.0 - 7.5)
@@ -79,10 +79,12 @@ export interface PondSummary {
 }
 
 export interface FarmOverview {
+  farm_id?: number;
   farm_name: string;
   location: string;
   total_area_ha: number;
   total_ponds: number;
+  active_ponds?: number;
   healthy_ponds: number;
   warning_ponds: number;
   critical_ponds: number;
@@ -91,7 +93,15 @@ export interface FarmOverview {
   energy_consumption_kwh: number;
   energy_cost_inr: number;
   active_alerts_count: number;
+  connected_devices?: number;
+  disconnected_devices?: number;
+  running_aerators?: number;
+  total_aerators?: number;
+  pending_maintenance?: number;
   devices_online_ratio: string;
+  data_provenance?: DataProvenance;
+  is_simulated?: boolean;
+  timestamp?: string;
   connectivity: {
     internet: "ONLINE" | "OFFLINE" | "DEGRADED";
     lora_gateway: "ONLINE" | "STANDBY_OFFLINE";
@@ -133,6 +143,13 @@ export interface FeederItem {
   reduction_reason?: string;
   reduction_percentage: number;
   next_feeding_time: string;
+  pond_do?: number;
+  pond_temp?: number;
+  pond_ammonia?: number;
+  is_stale?: boolean;
+  sensor_health?: string;
+  is_blocked?: boolean;
+  block_reason?: string | null;
 }
 
 export type AlertSeverity = "INFO" | "WARNING" | "HIGH" | "CRITICAL";
@@ -170,18 +187,78 @@ export interface IoTDeviceItem {
 }
 
 export interface WeatherObservation {
-  timestamp: string;
-  temperature_c: number;
+  timestamp_utc: string;
+  air_temperature_c: number;
   relative_humidity_pct: number;
   rainfall_mm: number;
+  rainfall_probability_pct?: number;
   wind_speed_kmh: number;
   wind_direction_deg: number;
-  surface_pressure_hpa: number;
-  weather_condition: string;
   cloud_cover_pct?: number;
-  location_name: string;
+  solar_radiation_wm2?: number;
+  atmospheric_pressure_hpa: number;
+  weather_code?: number;
+  weather_description: string;
+  location_name?: string;
   provider_name?: string;
   is_simulated?: boolean;
+  data_freshness_seconds?: number;
+}
+
+export interface PondSensorItem {
+  id: number;
+  device_id: string;
+  sensor_type: string;
+  model: string;
+  unit: string;
+  current_value: number;
+  min_safe: number;
+  max_safe: number;
+  optimal_min: number;
+  optimal_max: number;
+  status: string;
+  last_reading_at: string | null;
+  is_stale?: boolean;
+  provenance?: DataProvenance;
+}
+
+export interface DeviceCommandItem {
+  command_id: string;
+  device_id: string;
+  action: string;
+  status: CommandLifecycleStage | "COMPLETED" | "EXPIRED";
+  reason?: string;
+  mode?: string;
+  issued_at: string | null;
+  expires_at: string | null;
+  acknowledged_at?: string | null;
+  error_message?: string | null;
+}
+
+export interface HealthObservationItem {
+  id: number;
+  action: string;
+  pond_id: number;
+  pond_name?: string;
+  observation_type: "FARMER_OBSERVED" | "SPECIALIST_ESCALATION" | "LAB_CONFIRMED";
+  symptoms: string[];
+  mortality_observed: number;
+  feeding_response: string;
+  notes?: string;
+  recorded_by?: string;
+  timestamp: string | null;
+}
+
+export interface AIModelStatus {
+  model_id: string;
+  model_name?: string;
+  version: string;
+  model_status?: string;
+  status?: string;
+  validation_status?: string;
+  is_synthetic_model?: boolean;
+  pipeline_artifact_present?: boolean;
+  clinical_disclaimer?: string;
 }
 
 export interface ForecastPoint {

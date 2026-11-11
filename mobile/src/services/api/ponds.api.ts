@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { PondSummary } from '../../types';
+import { PondSummary, PondSensorItem, DataProvenance } from '../../types';
 
 export interface PondDetailResponse {
   overview: {
@@ -16,8 +16,12 @@ export interface PondDetailResponse {
     target_fcr: number;
     status: string;
     active_event?: string;
+    provenance?: DataProvenance;
+    is_stale?: boolean;
+    last_updated?: string;
   };
-  live_metrics: Record<string, { value: number; unit: string; status: string }>;
+  live_metrics: Record<string, { value: number; unit: string; status: string; calculated?: boolean }>;
+  sensors?: PondSensorItem[];
   chart_series: Array<{
     timestamp: string;
     do?: number;
@@ -30,6 +34,8 @@ export interface PondDetailResponse {
   time_range: string;
   aerators: any[];
   feeder: any;
+  feeding_history?: any[];
+  aeration_events?: any[];
   disease_predictions: any[];
   alerts: any[];
 }
@@ -42,7 +48,7 @@ export const pondsApi = {
     return response.data;
   },
 
-  async getPondDetail(pondId: number, timeRange: '24h' | '7d' | '30d' = '24h'): Promise<PondDetailResponse> {
+  async getPondDetail(pondId: number, timeRange: '6h' | '24h' | '7d' | '30d' = '24h'): Promise<PondDetailResponse> {
     const response = await apiClient.get<PondDetailResponse>(`/ponds/${pondId}`, {
       params: { time_range: timeRange },
     });

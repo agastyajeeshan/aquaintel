@@ -4,7 +4,7 @@ import { theme } from '../../theme';
 import { DataProvenance } from '../../types';
 
 interface StatusBadgeProps {
-  status: DataProvenance | 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED' | 'CRITICAL' | 'WARNING' | 'HIGH' | 'INFO' | 'ONLINE' | 'OFFLINE';
+  status: DataProvenance | 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED' | 'CRITICAL' | 'WARNING' | 'HIGH' | 'INFO' | 'ONLINE' | 'OFFLINE' | string;
   label?: string;
   size?: 'sm' | 'md';
 }
@@ -13,28 +13,44 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, label, size = 
   const getBadgeConfig = () => {
     switch (status) {
       case 'LIVE':
+      case 'EXECUTED':
+      case 'COMPLETED':
+      case 'VERIFIED':
         return {
           bg: theme.colors.successLight,
           text: theme.colors.success,
           border: theme.colors.successBorder,
-          defaultLabel: 'LIVE',
+          defaultLabel: status,
           dot: '#059669',
         };
       case 'DEMO':
+      case 'SIMULATED':
         return {
           bg: '#EDE9FE',
           text: '#7C3AED',
           border: '#DDD6FE',
-          defaultLabel: 'DEMO',
+          defaultLabel: status,
           dot: '#7C3AED',
         };
       case 'CACHED':
+      case 'PENDING':
+      case 'ACKNOWLEDGED':
         return {
           bg: theme.colors.warningLight,
           text: theme.colors.warning,
           border: theme.colors.warningBorder,
-          defaultLabel: 'CACHED',
+          defaultLabel: status,
           dot: '#D97706',
+        };
+      case 'FAILED':
+      case 'TIMED_OUT':
+      case 'EXPIRED':
+        return {
+          bg: theme.colors.criticalLight,
+          text: theme.colors.critical,
+          border: theme.colors.criticalBorder,
+          defaultLabel: status,
+          dot: '#DC2626',
         };
       case 'OFFLINE':
         return {

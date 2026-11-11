@@ -41,7 +41,7 @@ export default function PondDetailScreen() {
   const { isOnline, operatingMode } = useFarmStore();
 
   const [activeTab, setActiveTab] = useState<PondTab>('overview');
-  const [timeRange, setTimeRange] = useState<'24h' | '7d' | '30d'>('24h');
+  const [timeRange, setTimeRange] = useState<'6h' | '24h' | '7d' | '30d'>('24h');
   const [pondData, setPondData] = useState<PondDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -99,7 +99,14 @@ export default function PondDetailScreen() {
       return;
     }
 
-    const currentDo = pondData?.overview?.status ? (pondData as any).live_metrics?.do?.value || 6.0 : 6.0;
+    const currentDo = pondData?.live_metrics?.do?.value;
+    if (currentDo === undefined || currentDo === null || pondData?.overview?.is_stale) {
+      Alert.alert(
+        'Safety Lockout Active',
+        'Aerator control blocked: Pond dissolved oxygen reading is unavailable or stale.'
+      );
+      return;
+    }
 
     // Safety Interlock Check: Stop command when DO < 3.8 mg/L
     if (action === 'STOP' && currentDo < 3.8) {
@@ -148,8 +155,9 @@ export default function PondDetailScreen() {
   const tabs: Array<{ id: PondTab; label: string }> = [
     { id: 'overview', label: 'Overview' },
     { id: 'water_quality', label: 'Water Quality' },
-    { id: 'aeration', label: 'Aeration' },
+    { id: 'sensors', label: 'Sensors' },
     { id: 'feeding', label: 'Feeding' },
+    { id: 'aeration', label: 'Aeration' },
     { id: 'health', label: 'Health' },
     { id: 'history', label: 'History' },
   ];
@@ -275,26 +283,36 @@ export default function PondDetailScreen() {
             {activeTab === 'water_quality' && (
               <View>
                 <View style={styles.rangeSelector}>
-                  {(['24h', '7d', '30d'] as const).map((r) => (
+                  {(['6h', '24h', '7d', '30d'] as const).map((r) => (
                     <TouchableOpacity
                       key={r}
                       style={[styles.rangeBtn, timeRange === r && styles.rangeBtnActive]}
                       onPress={() => setTimeRange(r)}
                     >
                       <Text style={[styles.rangeBtnText, timeRange === r && styles.rangeBtnTextActive]}>
-                        {r.toUpperCase()} Trend
+                        {r.toUpperCase()}
                       </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
 
+                <TouchableOpacity
+                  style={styles.deepDiveBtn}
+                  onPress={() => router.push(`/water-quality/${id}` as any)}
+                >
+                  <Droplets size={16} color={theme.colors.primary} />
+                  <Text style={styles.deepDiveBtnText}>Open Full Water-Quality Analytics →</Text>
+                </TouchableOpacity>
+
                 {/* DO Chart */}
                 <TelemetryLineChart
                   data={
-                    pondData?.chart_series?.map((s) => ({
-                      timestamp: s.timestamp.split(' ')[1] || s.timestamp,
-                      value: s.do || 6.0,
-                    })) || []
+                    pondData?.chart_series
+                      ?.filter((s) => typeof s.do === 'number')
+                      .map((s) => ({
+                        timestamp: s.timestamp.split(' ')[1] || s.timestamp,
+                        value: s.do as number,
+                      })) || []
                   }
                   title="Dissolved Oxygen (DO)"
                   unit="mg/L"
@@ -307,10 +325,12 @@ export default function PondDetailScreen() {
                 {/* Temperature Chart */}
                 <TelemetryLineChart
                   data={
-                    pondData?.chart_series?.map((s) => ({
-                      timestamp: s.timestamp.split(' ')[1] || s.timestamp,
-                      value: s.temperature || 29.0,
-                    })) || []
+                    pondData?.chart_series
+                      ?.filter((s) => typeof s.temperature === 'number')
+                      .map((s) => ({
+                        timestamp: s.timestamp.split(' ')[1] || s.timestamp,
+                        value: s.temperature as number,
+                      })) || []
                   }
                   title="Water Temperature"
                   unit="°C"
@@ -324,10 +344,12 @@ export default function PondDetailScreen() {
                 {/* pH Chart */}
                 <TelemetryLineChart
                   data={
-                    pondData?.chart_series?.map((s) => ({
-                      timestamp: s.timestamp.split(' ')[1] || s.timestamp,
-                      value: s.ph || 8.0,
-                    })) || []
+                    pondData?.chart_series
+                      ?.filter((s) => typeof s.ph === 'number')
+                      .map((s) => ({
+                        timestamp: s.timestamp.split(' ')[1] || s.timestamp,
+                        value: s.ph as number,
+                      })) || []
                   }
                   title="Water pH"
                   unit="pH"
@@ -341,13 +363,39 @@ export default function PondDetailScreen() {
                 {/* Parameter Gauge Cards */}
                 {live && (
                   <View style={styles.sensorGrid}>
-                    <SensorStatusCard parameter="do" value={live.do?.value || 6.2} />
-                    <SensorStatusCard parameter="temperature" value={live.temperature?.value || 29.1} />
-                    <SensorStatusCard parameter="ph" value={live.ph?.value || 8.0} />
-                    <SensorStatusCard parameter="salinity" value={live.salinity?.value || 20.0} />
-                    <SensorStatusCard parameter="ammonia" value={live.ammonia?.value || 0.03} />
-                    <SensorStatusCard parameter="turbidity" value={live.turbidity?.value || 34.0} />
+                    <SensorStatusCard parameter="do" value={live.do?.value} timestamp={overview?.last_updated} provenance={overview?.provenance} isStale={overview?.is_stale} />
+                    <SensorStatusCard parameter="temperature" value={live.temperature?.value} timestamp={overview?.last_updated} provenance={overview?.provenance} isStale={overview?.is_stale} />
+                    <SensorStatusCard parameter="ph" value={live.ph?.value} timestamp={overview?.last_updated} provenance={overview?.provenance} isStale={overview?.is_stale} />
+                    <SensorStatusCard parameter="salinity" value={live.salinity?.value} timestamp={overview?.last_updated} provenance={overview?.provenance} isStale={overview?.is_stale} />
+                    <SensorStatusCard parameter="ammonia" value={live.ammonia?.value} timestamp={overview?.last_updated} provenance={overview?.provenance} isStale={overview?.is_stale} />
+                    <SensorStatusCard parameter="turbidity" value={live.turbidity?.value} timestamp={overview?.last_updated} provenance={overview?.provenance} isStale={overview?.is_stale} />
                   </View>
+                )}
+              </View>
+            )}
+
+            {/* 3. SENSORS TAB */}
+            {activeTab === 'sensors' && (
+              <View>
+                <Text style={styles.sectionHeader}>Connected Pond Probes & Diagnostics</Text>
+                {pondData?.sensors && pondData.sensors.length > 0 ? (
+                  pondData.sensors.map((s) => {
+                    const paramKey = s.sensor_type as any;
+                    return (
+                      <SensorStatusCard
+                        key={s.id}
+                        parameter={paramKey}
+                        value={s.status === 'OFFLINE' ? null : s.current_value}
+                        sensorId={s.device_id}
+                        pondLabel={`Pond ${String(overview?.pond_number ?? id).padStart(2, '0')}`}
+                        timestamp={s.last_reading_at}
+                        provenance={s.provenance}
+                        isStale={s.is_stale}
+                      />
+                    );
+                  })
+                ) : (
+                  <Text style={styles.emptyText}>No sensor probes registered for this pond.</Text>
                 )}
               </View>
             )}
@@ -410,30 +458,41 @@ export default function PondDetailScreen() {
             )}
 
             {/* 4. FEEDING TAB */}
-            {activeTab === 'feeding' && pondData?.feeder && (
+            {activeTab === 'feeding' && (
               <View>
                 <Text style={styles.sectionHeader}>Smart Feeder Status</Text>
-                <View style={styles.feederCard}>
-                  <Text style={styles.feederCode}>{pondData.feeder.code}</Text>
-                  <Text style={styles.feederName}>{pondData.feeder.name} ({pondData.feeder.feed_type})</Text>
+                {pondData?.feeder ? (
+                  <View style={styles.feederCard}>
+                    <Text style={styles.feederCode}>{pondData.feeder.code}</Text>
+                    <Text style={styles.feederName}>{pondData.feeder.name} ({pondData.feeder.feed_type})</Text>
 
-                  <View style={styles.feederGrid}>
-                    <View style={styles.feederCell}>
-                      <Text style={styles.feederLbl}>Dispensed Today</Text>
-                      <Text style={styles.feederVal}>{pondData.feeder.dispensed_today_kg} kg</Text>
+                    <View style={styles.feederGrid}>
+                      <View style={styles.feederCell}>
+                        <Text style={styles.feederLbl}>Dispensed Today</Text>
+                        <Text style={styles.feederVal}>{pondData.feeder.dispensed_today_kg} kg</Text>
+                      </View>
+                      <View style={styles.feederCell}>
+                        <Text style={styles.feederLbl}>Daily Quota</Text>
+                        <Text style={styles.feederVal}>{pondData.feeder.daily_quota_kg} kg</Text>
+                      </View>
+                      <View style={styles.feederCell}>
+                        <Text style={styles.feederLbl}>Hopper Level</Text>
+                        <Text style={styles.feederVal}>{pondData.feeder.current_feed_level_kg} kg</Text>
+                      </View>
                     </View>
-                    <View style={styles.feederCell}>
-                      <Text style={styles.feederLbl}>Daily Quota</Text>
-                      <Text style={styles.feederVal}>{pondData.feeder.daily_quota_kg} kg</Text>
-                    </View>
-                    <View style={styles.feederCell}>
-                      <Text style={styles.feederLbl}>Hopper Level</Text>
-                      <Text style={styles.feederVal}>{pondData.feeder.current_feed_level_kg} kg</Text>
-                    </View>
+
+                    <Text style={styles.nextFeed}>Next Scheduled Dispense: {pondData.feeder.next_feeding_time}</Text>
                   </View>
-
-                  <Text style={styles.nextFeed}>Next Scheduled Dispense: {pondData.feeder.next_feeding_time}</Text>
-                </View>
+                ) : (
+                  <Text style={styles.emptyText}>No feeder configured for this pond.</Text>
+                )}
+                <TouchableOpacity
+                  style={styles.deepDiveBtn}
+                  onPress={() => router.push('/feeding/history' as any)}
+                >
+                  <Utensils size={16} color={theme.colors.primary} />
+                  <Text style={styles.deepDiveBtnText}>View Full Feeding History →</Text>
+                </TouchableOpacity>
               </View>
             )}
 
@@ -866,6 +925,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: theme.colors.textSecondary,
     fontStyle: 'italic',
+  },
+  deepDiveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: theme.colors.primaryLight,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: 10,
+    marginBottom: theme.spacing.md,
+  },
+  deepDiveBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: theme.colors.primaryDark,
   },
   disclaimerText: {
     fontSize: 10,

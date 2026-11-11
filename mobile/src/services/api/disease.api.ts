@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { DiseaseRiskAssessment } from '../../types';
+import { DiseaseRiskAssessment, HealthObservationItem, AIModelStatus } from '../../types';
 
 export const diseaseApi = {
   async getRisks(pondId?: number): Promise<Array<{
@@ -15,6 +15,30 @@ export const diseaseApi = {
     const response = await apiClient.get('/disease/risks', {
       params: pondId ? { pond_id: pondId } : {},
     });
+    return response.data;
+  },
+
+  async getModelStatus(): Promise<AIModelStatus> {
+    const response = await apiClient.get<AIModelStatus>('/ai/models/status');
+    return response.data;
+  },
+
+  async getObservations(pondId?: number): Promise<HealthObservationItem[]> {
+    const response = await apiClient.get<HealthObservationItem[]>('/disease/observations', {
+      params: pondId ? { pond_id: pondId } : {},
+    });
+    return response.data;
+  },
+
+  async submitObservation(payload: {
+    pond_id: number;
+    symptoms: string[];
+    mortality_observed?: number;
+    feeding_response?: string;
+    observation_type: 'FARMER_OBSERVED' | 'SPECIALIST_ESCALATION' | 'LAB_CONFIRMED';
+    notes?: string;
+  }): Promise<any> {
+    const response = await apiClient.post('/disease/observations', payload);
     return response.data;
   },
 

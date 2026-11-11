@@ -4,6 +4,7 @@ import { authApi } from '../services/api/auth.api';
 import { secureStorage } from '../services/storage/secureStore';
 import { setOnUnauthorizedCallback } from '../services/api/client';
 import { notificationService } from '../services/notifications/notificationService';
+import { offlineDatabase } from '../services/storage/database';
 
 interface AuthState {
   user: UserProfile | null;
@@ -44,7 +45,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           username: response.username,
           full_name: response.full_name,
           role: role,
-          email: `${response.username}@aquaintel.io`,
+          email: '',
         };
       }
 
@@ -79,6 +80,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Ignore network errors during logout
     }
     await secureStorage.clearAllSession();
+    await offlineDatabase.clearAllCache();
     set({
       user: null,
       token: null,

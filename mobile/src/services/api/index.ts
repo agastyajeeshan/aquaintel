@@ -6,6 +6,7 @@ export * from './sensors.api';
 export * from './aeration.api';
 export * from './feeding.api';
 export * from './climate.api';
+export * from './intelligence.api';
 export * from './disease.api';
 export * from './devices.api';
 export * from './alerts.api';

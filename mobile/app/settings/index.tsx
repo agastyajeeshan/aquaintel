@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { settingsApi } from '../../src/services/api/settings.api';
 import { useAuthStore } from '../../src/store/authStore';
+import { ENV } from '../../src/constants';
 import { theme } from '../../src/theme';
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { LoadingState, ErrorState } from '../../src/components/common/FeedbackStates';
@@ -144,39 +145,43 @@ export default function SettingsScreen() {
                 <Text style={styles.cardTitle}>Farm Facility Metadata</Text>
                 <View style={styles.propRow}>
                   <Text style={styles.propLabel}>Farm Name:</Text>
-                  <Text style={styles.propVal}>{settings.farm_name || 'AquaIntel Commercial Estate'}</Text>
+                  <Text style={styles.propVal}>{settings.farm_name || '—'}</Text>
                 </View>
                 <View style={styles.propRow}>
                   <Text style={styles.propLabel}>Location:</Text>
-                  <Text style={styles.propVal}>{settings.location || 'Nellore, Andhra Pradesh'}</Text>
+                  <Text style={styles.propVal}>{settings.location || '—'}</Text>
                 </View>
                 <View style={styles.propRow}>
                   <Text style={styles.propLabel}>Total Area:</Text>
-                  <Text style={styles.propVal}>{settings.total_area_ha || 10.0} Hectares</Text>
+                  <Text style={styles.propVal}>{settings.total_area_ha != null ? `${settings.total_area_ha} Hectares` : '—'}</Text>
                 </View>
                 <View style={styles.propRow}>
                   <Text style={styles.propLabel}>Total Ponds:</Text>
-                  <Text style={styles.propVal}>{settings.total_ponds || 10}</Text>
+                  <Text style={styles.propVal}>{settings.total_ponds ?? '—'}</Text>
                 </View>
                 <View style={styles.propRow}>
-                  <Text style={styles.propLabel}>LoRa Frequency:</Text>
-                  <Text style={styles.propVal}>865.2 MHz (IN865 Band)</Text>
+                  <Text style={styles.propLabel}>API Endpoint:</Text>
+                  <Text style={styles.propVal}>{ENV.API_BASE_URL}</Text>
                 </View>
               </View>
 
               <View style={styles.card}>
-                <Text style={styles.cardTitle}>Autonomous Engine Configuration</Text>
+                <Text style={styles.cardTitle}>Backend Safety Thresholds</Text>
                 <View style={styles.propRow}>
-                  <Text style={styles.propLabel}>Engine Mode:</Text>
-                  <Text style={styles.propVal}>SUPERVISED_AUTONOMOUS</Text>
+                  <Text style={styles.propLabel}>Hypoxia Lockout:</Text>
+                  <Text style={[styles.propVal, { color: theme.colors.critical }]}>
+                    {'<'} {settings.do_emergency_threshold ?? 3.8} mg/L DO
+                  </Text>
                 </View>
                 <View style={styles.propRow}>
-                  <Text style={styles.propLabel}>Hypoxia Interlock:</Text>
-                  <Text style={[styles.propVal, { color: theme.colors.critical }]}>{'<'} 3.80 mg/L DO</Text>
+                  <Text style={styles.propLabel}>Ammonia Warning:</Text>
+                  <Text style={[styles.propVal, { color: theme.colors.warning }]}>
+                    {settings.ammonia_warning_threshold ?? 0.08} mg/L TAN
+                  </Text>
                 </View>
                 <View style={styles.propRow}>
-                  <Text style={styles.propLabel}>Feeding Cutoff:</Text>
-                  <Text style={[styles.propVal, { color: theme.colors.warning }]}>{'<'} 4.00 mg/L DO</Text>
+                  <Text style={styles.propLabel}>Aeration Hysteresis:</Text>
+                  <Text style={styles.propVal}>{settings.hysteresis_minutes ?? 10} min</Text>
                 </View>
               </View>
 
@@ -212,7 +217,7 @@ export default function SettingsScreen() {
                 <View key={log.id} style={styles.logItem}>
                   <View style={styles.logTop}>
                     <Text style={styles.logAction}>{log.action}</Text>
-                    <Text style={styles.logTime}>{log.created_at}</Text>
+                    <Text style={styles.logTime}>{log.timestamp || log.created_at || ''}</Text>
                   </View>
                   <Text style={styles.logResource}>
                     Resource: {log.resource_type} ({log.resource_id}) • Operator: {log.username || 'System'}

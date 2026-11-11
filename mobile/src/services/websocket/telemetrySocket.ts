@@ -71,10 +71,17 @@ class TelemetrySocketManager {
       this.ws.onmessage = (event) => {
         try {
           const parsed = JSON.parse(event.data);
-          const eventType = parsed.event || 'telemetry_update';
-          const handlers = this.listeners.get(eventType);
+          const rawEvent = parsed.type || parsed.event || 'TELEMETRY_UPDATE';
+          const normalizedEvent = String(rawEvent).toUpperCase();
+          const payload = parsed.data || parsed;
+
+          const handlers = this.listeners.get(rawEvent) || this.listeners.get(normalizedEvent);
           if (handlers) {
-            handlers.forEach((h) => h(parsed.data || parsed));
+            handlers.forEach((h) => h(payload));
+          }
+          // Notify lowercase alias if different
+          if (normalizedEvent === 'TELEMETRY_UPDATE' && rawEvent !== 'telemetry_update') {
+            this.listeners.get('telemetry_update')?.forEach((h) => h(payload));
           }
           // Also notify generic wildcard listeners
           this.listeners.get('*')?.forEach((h) => h(parsed));

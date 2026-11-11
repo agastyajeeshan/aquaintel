@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,20 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '../../src/utils/zodResolver';
 import { useAuthStore } from '../../src/store/authStore';
 import { theme } from '../../src/theme';
 import { PrimaryButton } from '../../src/components/common/Buttons';
-import { Waves, Lock, User, AlertCircle } from 'lucide-react-native';
+import { Waves, Lock, User, AlertCircle, ShieldCheck } from 'lucide-react-native';
+
+const loginSchema = z.object({
+  username: z.string().trim().min(1, 'Username is required'),
+  password: z.string().min(1, 'Password is required'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,22 +32,24 @@ export default function LoginScreen() {
   const error = useAuthStore((s) => s.error);
   const clearError = useAuthStore((s) => s.clearError);
 
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const {
+    control,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: '',
+      password: '',
+    },
+  });
 
-  const handleLogin = async () => {
-    if (!username.trim() || !password) return;
+  const onSubmit = async (values: LoginFormValues) => {
     clearError();
-    const success = await login(username.trim(), password);
+    const success = await login(values.username.trim(), values.password);
     if (success) {
       router.replace('/(tabs)');
     }
-  };
-
-  const setDemoAccount = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    clearError();
   };
 
   return (
@@ -55,7 +67,7 @@ export default function LoginScreen() {
           </View>
           <Text style={styles.title}>AquaIntel</Text>
           <Text style={styles.subtitle}>
-            Nellore Commercial Estate • Operational Login
+            Aquaculture Operations & Safety Console
           </Text>
         </View>
 
@@ -69,18 +81,32 @@ export default function LoginScreen() {
         <View style={styles.formCard}>
           <View style={styles.inputGroup}>
             <Text style={styles.inputLabel}>Username</Text>
-            <View style={styles.inputWrapper}>
-              <User size={18} color={theme.colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={username}
-                onChangeText={setUsername}
-                placeholder="Enter username"
-                placeholderTextColor={theme.colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
+            <Controller
+              control={control}
+              name="username"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <User size={18} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={value}
+                    onChangeText={(text) => {
+                      clearError();
+                      onChange(text);
+                    }}
+                    onBlur={onBlur}
+                    placeholder="Enter your farm username"
+                    placeholderTextColor={theme.colors.textMuted}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    accessibilityLabel="Username"
+                  />
+                </View>
+              )}
+            />
+            {errors.username && (
+              <Text style={styles.fieldError}>{errors.username.message}</Text>
+            )}
           </View>
 
           <View style={styles.inputGroup}>
@@ -90,61 +116,51 @@ export default function LoginScreen() {
                 <Text style={styles.forgotText}>Forgot password?</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.inputWrapper}>
-              <Lock size={18} color={theme.colors.textSecondary} style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Enter password"
-                placeholderTextColor={theme.colors.textMuted}
-                secureTextEntry
-                autoCapitalize="none"
-              />
-            </View>
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <Lock size={18} color={theme.colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    value={value}
+                    onChangeText={(text) => {
+                      clearError();
+                      onChange(text);
+                    }}
+                    onBlur={onBlur}
+                    placeholder="Enter your password"
+                    placeholderTextColor={theme.colors.textMuted}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    accessibilityLabel="Password"
+                  />
+                </View>
+              )}
+            />
+            {errors.password && (
+              <Text style={styles.fieldError}>{errors.password.message}</Text>
+            )}
           </View>
 
           <PrimaryButton
             title="Sign In to Farm Console"
-            onPress={handleLogin}
+            onPress={handleSubmit(onSubmit)}
             loading={isLoading}
             style={styles.submitBtn}
           />
         </View>
 
-        {/* Demo Fast-Select Credentials */}
-        <View style={styles.demoSection}>
-          <Text style={styles.demoTitle}>Quick Select Operational Roles:</Text>
-          <View style={styles.demoChips}>
-            <TouchableOpacity
-              style={styles.demoChip}
-              onPress={() => setDemoAccount('operator', 'operator123')}
-            >
-              <Text style={styles.demoChipText}>Operator (Venkat)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.demoChip}
-              onPress={() => setDemoAccount('manager', 'farm123')}
-            >
-              <Text style={styles.demoChipText}>Manager (Naresh)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.demoChip}
-              onPress={() => setDemoAccount('admin', 'admin123')}
-            >
-              <Text style={styles.demoChipText}>Admin (Dr. Srinivas)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.demoChip}
-              onPress={() => setDemoAccount('viewer', 'viewer123')}
-            >
-              <Text style={styles.demoChipText}>Viewer (Rajiv)</Text>
-            </TouchableOpacity>
-          </View>
+        <View style={styles.securityNotice}>
+          <ShieldCheck size={16} color={theme.colors.primary} />
+          <Text style={styles.securityNoticeText}>
+            Authenticated sessions use hardware-backed encrypted token storage. Contact your farm administrator for account access.
+          </Text>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Need an authorized account? </Text>
+          <Text style={styles.footerText}>Need an operator account? </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
             <Text style={styles.registerLink}>Register</Text>
           </TouchableOpacity>
@@ -252,42 +268,30 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.textPrimary,
   },
+  fieldError: {
+    fontSize: 11,
+    color: theme.colors.critical,
+    marginTop: 4,
+  },
   submitBtn: {
     marginTop: theme.spacing.sm,
   },
-  demoSection: {
+  securityNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
     marginTop: theme.spacing.xl,
     padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
+    backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.borderRadius.md,
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  demoTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: theme.colors.textSecondary,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  demoChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  demoChip: {
-    backgroundColor: theme.colors.primaryLight,
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    borderRadius: theme.borderRadius.full,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  demoChipText: {
-    fontSize: 12,
-    fontWeight: '600',
+  securityNoticeText: {
+    fontSize: 11,
     color: theme.colors.primaryDark,
+    lineHeight: 16,
+    flex: 1,
   },
   footer: {
     flexDirection: 'row',

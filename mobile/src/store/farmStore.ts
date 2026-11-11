@@ -17,6 +17,7 @@ interface FarmState {
 
   fetchFarmData: () => Promise<void>;
   updatePondLiveMetrics: (pondId: number, metrics: WaterQualityMetrics, timestamp?: string) => void;
+  updateFleetFromSnapshot: (pondsSnapshot: any[], isBackendOffline?: boolean) => void;
   setSelectedPondId: (id: number | null) => void;
   setOnlineStatus: (online: boolean) => void;
   calculateProvenance: () => DataProvenance;
@@ -33,11 +34,14 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   error: null,
 
   calculateProvenance: () => {
-    const { isOnline, lastUpdated } = get();
+    const { isOnline, lastUpdated, overview } = get();
     if (!isOnline) return 'OFFLINE';
     if (!lastUpdated) return 'CACHED';
     const ageMs = Date.now() - new Date(lastUpdated).getTime();
     if (ageMs > FRESHNESS_THRESHOLD_MS) return 'STALE';
+    if (overview?.is_simulated || overview?.data_provenance === 'DEMO' || overview?.data_provenance === 'SIMULATED') {
+      return 'DEMO';
+    }
     return 'LIVE';
   },
 
@@ -49,12 +53,17 @@ export const useFarmStore = create<FarmState>((set, get) => ({
         pondsApi.getPonds(),
       ]);
 
-      const now = new Date().toISOString();
+      const now = overviewData.timestamp || new Date().toISOString();
+      const provenance: DataProvenance =
+        overviewData.is_simulated || overviewData.data_provenance === 'DEMO'
+          ? 'DEMO'
+          : 'LIVE';
+
       set({
         overview: overviewData,
         ponds: pondsData,
         lastUpdated: now,
-        operatingMode: 'LIVE',
+        operatingMode: provenance,
         isLoading: false,
       });
 
@@ -104,7 +113,58 @@ export const useFarmStore = create<FarmState>((set, get) => ({
           : p
       ),
       lastUpdated: now,
-      operatingMode: 'LIVE',
+      operatingMode:
+        state.overview?.is_simulated || metrics.provenance === 'DEMO' || metrics.provenance === 'SIMULATED'
+          ? 'DEMO'
+          : 'LIVE',
+    }));
+  },
+
+  updateFleetFromSnapshot: (pondsSnapshot: any[], isBackendOffline?: boolean) => {
+    if (!Array.isArray(pondsSnapshot) || pondsSnapshot.length === 0) return;
+    const snapshotById = new Map<number, any>();
+    for (const snap of pondsSnapshot) {
+      if (snap?.pond_id) snapshotById.set(snap.pond_id, snap);
+    }
+    const now = new Date().toISOString();
+    const firstSnap = pondsSnapshot[0];
+    const isSimulated = firstSnap?.data_provenance === 'SYNTHETIC_SIMULATED';
+
+    set((state) => ({
+      ponds: state.ponds.map((p) => {
+        const snap = snapshotById.get(p.id);
+        if (!snap?.metrics) return p;
+        const m = snap.metrics;
+        const isStale = Boolean(snap.is_stale);
+        const provenance: DataProvenance = isBackendOffline
+          ? 'OFFLINE'
+          : isStale
+          ? 'STALE'
+          : isSimulated
+          ? 'DEMO'
+          : 'LIVE';
+        return {
+          ...p,
+          status: snap.status || p.status,
+          active_event: snap.active_event ?? p.active_event,
+          provenance,
+          water_quality: {
+            ...p.water_quality,
+            do: m.do?.value ?? p.water_quality.do,
+            ph: m.ph?.value ?? p.water_quality.ph,
+            temperature: m.temperature?.value ?? p.water_quality.temperature,
+            ammonia: m.ammonia?.value ?? p.water_quality.ammonia,
+            salinity: m.salinity?.value ?? p.water_quality.salinity,
+            turbidity: m.turbidity?.value ?? p.water_quality.turbidity,
+            water_depth_m: m.water_level?.value ?? p.water_quality.water_depth_m,
+            last_updated: snap.timestamp || now,
+            stale: isStale,
+            provenance,
+          },
+        };
+      }),
+      lastUpdated: now,
+      operatingMode: isBackendOffline ? 'OFFLINE' : isSimulated ? 'DEMO' : 'LIVE',
     }));
   },
 
@@ -112,7 +172,13 @@ export const useFarmStore = create<FarmState>((set, get) => ({
   setOnlineStatus: (online: boolean) => {
     set((state) => ({
       isOnline: online,
-      operatingMode: !online ? 'OFFLINE' : state.lastUpdated ? 'LIVE' : 'CACHED',
+      operatingMode: !online
+        ? 'OFFLINE'
+        : state.overview?.is_simulated
+        ? 'DEMO'
+        : state.lastUpdated
+        ? 'LIVE'
+        : 'CACHED',
     }));
   },
 }));

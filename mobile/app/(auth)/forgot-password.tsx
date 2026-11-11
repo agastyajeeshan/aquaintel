@@ -110,7 +110,7 @@ export default function ForgotPasswordScreen() {
                   style={styles.input}
                   value={email}
                   onChangeText={setEmail}
-                  placeholder="e.g. operator@aquaintel.farm"
+                  placeholder="name@company.com"
                   placeholderTextColor={theme.colors.textMuted}
                   keyboardType="email-address"
                   autoCapitalize="none"

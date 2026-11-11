@@ -5,11 +5,22 @@ export const climateApi = {
   async getCurrentWeather(): Promise<{
     status: string;
     weather: WeatherObservation;
+    location_name?: string;
     provider: string;
     is_simulated: boolean;
     data_freshness_seconds: number;
   }> {
     const response = await apiClient.get('/climate/weather/current');
+    return response.data;
+  },
+
+  async getFleetAnalysis(): Promise<any> {
+    const response = await apiClient.get('/climate/analysis');
+    return response.data;
+  },
+
+  async getModelPerformance(): Promise<any> {
+    const response = await apiClient.get('/climate/models/performance');
     return response.data;
   },
 

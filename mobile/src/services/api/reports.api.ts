@@ -8,6 +8,13 @@ export const reportsApi = {
     return response.data;
   },
 
+  async downloadCsvReport(): Promise<string> {
+    const response = await apiClient.get<string>('/reports/export-csv', {
+      responseType: 'text',
+    });
+    return response.data;
+  },
+
   getCsvExportUrl(): string {
     return `${ENV.API_BASE_URL}/reports/export-csv`;
   },

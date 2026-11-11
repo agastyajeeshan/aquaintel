@@ -75,7 +75,12 @@ export default function DevicesScreen() {
         <FlatList
           data={deviceData.devices}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <DeviceCard device={item} />}
+          renderItem={({ item }) => (
+            <DeviceCard
+              device={item}
+              onPress={() => router.push(`/devices/${item.device_id}` as any)}
+            />
+          )}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl

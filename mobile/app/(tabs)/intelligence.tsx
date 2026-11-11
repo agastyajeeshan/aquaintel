@@ -27,9 +27,11 @@ import {
 } from 'lucide-react-native';
 
 export default function IntelligenceScreen() {
-  const { ponds, operatingMode } = useFarmStore();
+  const { ponds, overview, operatingMode } = useFarmStore();
   const [selectedPondId, setSelectedPondId] = useState<number>(1);
+  const [selectedHorizon, setSelectedHorizon] = useState<string>('ALL');
   const [weather, setWeather] = useState<WeatherObservation | null>(null);
+  const [weatherLocation, setWeatherLocation] = useState<string>('Configured Farm Station');
   const [forecast, setForecast] = useState<MultiHorizonForecast | null>(null);
   const [recommendations, setRecommendations] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +48,9 @@ export default function IntelligenceScreen() {
         climateApi.getPondRecommendations(pondId),
       ]);
       setWeather(weatherRes.weather);
+      setWeatherLocation(
+        weatherRes.location_name || weatherRes.weather?.location_name || overview?.location || 'Configured Farm Site'
+      );
       setForecast(forecastRes);
       setRecommendations(recRes);
     } catch (err: any) {
@@ -82,9 +87,14 @@ export default function IntelligenceScreen() {
   };
 
   // Format multi-horizon points for chart
+  const filterHorizons = (entries: Array<[string, any]>) => {
+    if (selectedHorizon === 'ALL') return entries;
+    return entries.filter(([key]) => key.toLowerCase() === selectedHorizon.toLowerCase());
+  };
+
   const getDoForecastPoints = () => {
     if (!forecast?.horizons) return [];
-    return Object.entries(forecast.horizons).map(([horizonKey, data]) => ({
+    return filterHorizons(Object.entries(forecast.horizons)).map(([horizonKey, data]) => ({
       horizon: horizonKey,
       predicted: data.dissolved_oxygen.predicted_value,
       lower: data.dissolved_oxygen.lower_bound,
@@ -94,12 +104,24 @@ export default function IntelligenceScreen() {
 
   const getTempForecastPoints = () => {
     if (!forecast?.horizons) return [];
-    return Object.entries(forecast.horizons).map(([horizonKey, data]) => ({
+    return filterHorizons(Object.entries(forecast.horizons)).map(([horizonKey, data]) => ({
       horizon: horizonKey,
       predicted: data.water_temperature.predicted_value,
       lower: data.water_temperature.lower_bound,
       upper: data.water_temperature.upper_bound,
     }));
+  };
+
+  const getPhForecastPoints = () => {
+    if (!forecast?.horizons) return [];
+    return filterHorizons(Object.entries(forecast.horizons))
+      .filter(([, data]) => data.ph)
+      .map(([horizonKey, data]) => ({
+        horizon: horizonKey,
+        predicted: data.ph.predicted_value,
+        lower: data.ph.lower_bound,
+        upper: data.ph.upper_bound,
+      }));
   };
 
   const selectedPond = ponds.find((p) => p.id === selectedPondId);
@@ -129,42 +151,59 @@ export default function IntelligenceScreen() {
             />
           }
         >
-          {/* Weather Station Observation Strip */}
-          {weather && (
+          {/* Weather Station Observation Strip (Distinct from pond sensors) */}
+          {weather ? (
             <View style={styles.weatherCard}>
               <View style={styles.weatherTopRow}>
-                <View>
-                  <Text style={styles.weatherStation}>COASTAL METEOROLOGICAL STATION</Text>
-                  <Text style={styles.weatherLocation}>{weather.location_name}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.weatherStation}>
+                    WEATHER OBSERVATION • {weather.is_simulated ? 'SIMULATED' : weather.provider_name || 'METEOROLOGICAL API'}
+                  </Text>
+                  <Text style={styles.weatherLocation}>{weatherLocation}</Text>
                 </View>
                 <View style={styles.conditionPill}>
                   <CloudRain size={14} color={theme.colors.secondary} />
-                  <Text style={styles.conditionText}>{weather.weather_condition}</Text>
+                  <Text style={styles.conditionText}>{weather.weather_description}</Text>
                 </View>
               </View>
 
               <View style={styles.weatherMetricsGrid}>
                 <View style={styles.weatherCell}>
                   <Thermometer size={14} color={theme.colors.textSecondary} />
-                  <Text style={styles.weatherVal}>{weather.temperature_c.toFixed(1)}°C</Text>
+                  <Text style={styles.weatherVal}>
+                    {weather.air_temperature_c != null ? `${weather.air_temperature_c.toFixed(1)}°C` : '—'}
+                  </Text>
                   <Text style={styles.weatherLbl}>Air Temp</Text>
                 </View>
                 <View style={styles.weatherCell}>
                   <Droplets size={14} color={theme.colors.textSecondary} />
-                  <Text style={styles.weatherVal}>{weather.relative_humidity_pct.toFixed(0)}%</Text>
+                  <Text style={styles.weatherVal}>
+                    {weather.relative_humidity_pct != null ? `${weather.relative_humidity_pct.toFixed(0)}%` : '—'}
+                  </Text>
                   <Text style={styles.weatherLbl}>Humidity</Text>
                 </View>
                 <View style={styles.weatherCell}>
                   <CloudRain size={14} color={theme.colors.textSecondary} />
-                  <Text style={styles.weatherVal}>{weather.rainfall_mm.toFixed(1)} mm</Text>
+                  <Text style={styles.weatherVal}>
+                    {weather.rainfall_mm != null ? `${weather.rainfall_mm.toFixed(1)} mm` : '—'}
+                  </Text>
                   <Text style={styles.weatherLbl}>Rainfall</Text>
                 </View>
                 <View style={styles.weatherCell}>
                   <Wind size={14} color={theme.colors.textSecondary} />
-                  <Text style={styles.weatherVal}>{weather.wind_speed_kmh.toFixed(0)} km/h</Text>
+                  <Text style={styles.weatherVal}>
+                    {weather.wind_speed_kmh != null ? `${weather.wind_speed_kmh.toFixed(0)} km/h` : '—'}
+                  </Text>
                   <Text style={styles.weatherLbl}>Wind</Text>
                 </View>
               </View>
+            </View>
+          ) : (
+            <View style={styles.weatherCard}>
+              <Text style={styles.weatherStation}>WEATHER SERVICE UNAVAILABLE</Text>
+              <Text style={styles.recExplanation}>
+                Live atmospheric observations are currently unavailable. Pond telemetry remains isolated from weather feeds.
+              </Text>
             </View>
           )}
 
@@ -259,25 +298,64 @@ export default function IntelligenceScreen() {
             </View>
           )}
 
+          {/* Forecast Horizon Selector */}
+          {forecast?.horizons && (
+            <View style={styles.selectorSection}>
+              <Text style={styles.selectorTitle}>
+                Forecast Horizon {forecast.forecast_generated_at ? `• Generated ${new Date(forecast.forecast_generated_at).toLocaleTimeString()}` : ''}
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pondChips}>
+                {['ALL', ...Object.keys(forecast.horizons)].map((hKey) => (
+                  <TouchableOpacity
+                    key={hKey}
+                    style={[styles.pondChip, selectedHorizon === hKey && styles.pondChipActive]}
+                    onPress={() => setSelectedHorizon(hKey)}
+                  >
+                    <Text
+                      style={[
+                        styles.pondChipText,
+                        selectedHorizon === hKey && styles.pondChipTextActive,
+                      ]}
+                    >
+                      {hKey.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
           {/* Dissolved Oxygen Multi-Horizon Forecast Chart */}
           <ForecastBandChart
-            title={`Dissolved Oxygen Forecast (Pond ${selectedPond?.pond_number || 1})`}
+            title={`Dissolved Oxygen Forecast (Pond ${selectedPond?.pond_number || selectedPondId})`}
             unit="mg/L"
-            currentValue={selectedPond?.water_quality.do || 6.2}
+            currentValue={selectedPond?.water_quality?.do ?? 0}
             forecastPoints={getDoForecastPoints()}
-            modelInfo={forecast?.model_id || 'DO Physics Hybrid Engine v2.1'}
+            modelInfo={`${forecast?.model_id || 'AquaIntel Predictive'} ${forecast?.model_version || ''}`.trim()}
             disclaimer={forecast?.disclaimer}
           />
 
           {/* Temperature Forecast Chart */}
           <ForecastBandChart
-            title={`Water Temperature Forecast (Pond ${selectedPond?.pond_number || 1})`}
+            title={`Water Temperature Forecast (Pond ${selectedPond?.pond_number || selectedPondId})`}
             unit="°C"
-            currentValue={selectedPond?.water_quality.temperature || 29.1}
+            currentValue={selectedPond?.water_quality?.temperature ?? 0}
             forecastPoints={getTempForecastPoints()}
-            modelInfo="Thermal Mass Exchange Model v2.1"
-            disclaimer="Advisory 90% confidence bounds calibrated against Nellore meteorological station."
+            modelInfo={`${forecast?.model_id || 'Thermal Model'} ${forecast?.model_version || ''}`.trim()}
+            disclaimer={forecast?.disclaimer || 'Advisory 90% confidence intervals from configured backend predictive engine.'}
           />
+
+          {/* pH Forecast Chart */}
+          {getPhForecastPoints().length > 0 && (
+            <ForecastBandChart
+              title={`Water pH Forecast (Pond ${selectedPond?.pond_number || selectedPondId})`}
+              unit="pH"
+              currentValue={selectedPond?.water_quality?.ph ?? 0}
+              forecastPoints={getPhForecastPoints()}
+              modelInfo={`${forecast?.model_id || 'Carbonate Buffer Model'} ${forecast?.model_version || ''}`.trim()}
+              disclaimer={forecast?.disclaimer}
+            />
+          )}
         </ScrollView>
       )}
     </View>

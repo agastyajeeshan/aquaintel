@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
+import { useFarmStore } from '../../src/store/farmStore';
 import { useSettingsStore } from '../../src/store/settingsStore';
 import { offlineDatabase } from '../../src/services/storage/database';
 import { theme } from '../../src/theme';
@@ -32,6 +33,7 @@ import {
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { overview, operatingMode, isOnline, lastUpdated } = useFarmStore();
   const {
     temperatureUnit,
     setTemperatureUnit,
@@ -83,11 +85,11 @@ export default function ProfileScreen() {
             <User size={32} color={theme.colors.primary} />
           </View>
           <View style={styles.userInfo}>
-            <Text style={styles.userName}>{user?.full_name || 'Farm Operator'}</Text>
+            <Text style={styles.userName}>{user?.full_name || user?.username || 'Authenticated Operator'}</Text>
             <Text style={styles.userRole}>
-              Role: {user?.role || 'OPERATOR'} • {user?.username}
+              Role: {user?.role || 'OPERATOR'} • {user?.username || '—'}
             </Text>
-            <Text style={styles.userEmail}>{user?.email || 'operator@aquaintel.farm'}</Text>
+            <Text style={styles.userEmail}>{user?.email || 'No email on profile'}</Text>
           </View>
         </View>
 
@@ -95,12 +97,14 @@ export default function ProfileScreen() {
         <View style={styles.facilityBox}>
           <View style={styles.facilityLeft}>
             <Shield size={18} color={theme.colors.primary} />
-            <View>
-              <Text style={styles.facilityTitle}>Commercial Estate</Text>
-              <Text style={styles.facilitySubtitle}>Nellore, Andhra Pradesh • 10.0 Hectares</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.facilityTitle}>{overview?.farm_name || 'Authorized Farm Facility'}</Text>
+              <Text style={styles.facilitySubtitle}>
+                {overview?.location || 'Configured Farm Location'} • {overview?.total_area_ha ? `${overview.total_area_ha} Hectares` : '—'}
+              </Text>
             </View>
           </View>
-          <Text style={styles.facilityBadge}>IN865</Text>
+          <Text style={styles.facilityBadge}>{operatingMode}</Text>
         </View>
 
         {/* Section: Operational Shortcuts */}
@@ -174,8 +178,33 @@ export default function ProfileScreen() {
         </View>
 
         {/* Section: Data Storage & Maintenance */}
-        <Text style={styles.sectionHeader}>Storage & Cache</Text>
+        <Text style={styles.sectionHeader}>Data Sync & Privacy</Text>
         <View style={styles.menuGroup}>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Sync Status</Text>
+            <Text style={styles.actionMetaText}>
+              {isOnline ? operatingMode : 'OFFLINE'} • {lastUpdated ? new Date(lastUpdated).toLocaleTimeString() : 'Never'}
+            </Text>
+          </View>
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>Language</Text>
+            <Text style={styles.actionMetaText}>English (en)</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() =>
+              Alert.alert(
+                'Privacy & Security',
+                'JWT credentials are encrypted in Android Keystore via Expo SecureStore. Cached pond telemetry in local SQLite is purged automatically upon sign out.'
+              )
+            }
+          >
+            <View style={styles.menuItemLeft}>
+              <HelpCircle size={20} color={theme.colors.primary} />
+              <Text style={styles.menuItemText}>Privacy & Token Security</Text>
+            </View>
+            <ChevronRight size={18} color={theme.colors.textSecondary} />
+          </TouchableOpacity>
           <TouchableOpacity
             style={styles.menuItem}
             onPress={handleClearCache}

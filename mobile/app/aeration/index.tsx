@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { aerationApi, AerationStatusResponse } from '../../src/services/api/aeration.api';
 import { useFarmStore } from '../../src/store/farmStore';
+import { useAuthStore } from '../../src/store/authStore';
 import { theme } from '../../src/theme';
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { MetricCard } from '../../src/components/common/MetricCard';
@@ -22,6 +23,7 @@ import { Wind, Play, Square, AlertTriangle, ShieldCheck, Zap } from 'lucide-reac
 export default function AerationScreen() {
   const router = useRouter();
   const { isOnline, operatingMode, ponds } = useFarmStore();
+  const user = useAuthStore((s) => s.user);
 
   const [aerationData, setAerationData] = useState<AerationStatusResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -81,15 +83,31 @@ export default function AerationScreen() {
       return;
     }
 
-    const currentPondDo = aerator.pond_do || 6.0;
-
-    // Safety Interlock: Emergency Hypoxia Lockout (< 3.8 mg/L)
-    if (action === 'STOP' && currentPondDo < 3.8) {
-      Alert.alert(
-        'Safety Lockout Active',
-        `Aerator stop rejected: Pond DO (${currentPondDo.toFixed(2)} mg/L) is below emergency limit (3.80 mg/L). Shrimps are at immediate risk of hypoxia mortality.`
-      );
+    if (user?.role === 'VIEWER') {
+      Alert.alert('Insufficient Permissions', 'Read-only roles cannot operate farm equipment.');
       return;
+    }
+
+    const pond = ponds.find((p) => p.id === aerator.pond_id);
+    const currentPondDo = aerator.pond_do ?? pond?.water_quality?.do;
+    const isStale = pond?.water_quality?.stale;
+
+    // Safety Interlock: Block STOP when DO is unavailable/stale or < 3.8 mg/L
+    if (action === 'STOP') {
+      if (currentPondDo === undefined || currentPondDo === null || isStale) {
+        Alert.alert(
+          'Safety Lockout Active',
+          'Aerator stop rejected: Pond DO telemetry is currently unavailable or stale.'
+        );
+        return;
+      }
+      if (currentPondDo < 3.8) {
+        Alert.alert(
+          'Safety Lockout Active',
+          `Aerator stop rejected: Pond DO (${currentPondDo.toFixed(2)} mg/L) is below emergency limit (3.80 mg/L). Shrimps are at immediate risk of hypoxia mortality.`
+        );
+        return;
+      }
     }
 
     setConfirmModal({
@@ -101,7 +119,7 @@ export default function AerationScreen() {
       isDangerous: action === 'STOP' || action === 'EMERGENCY_OVERRIDE',
       safetyNotice:
         action === 'STOP'
-          ? 'Notice: Stop commands will be rejected if pond DO drops below 3.8 mg/L.'
+          ? 'Notice: Backend & edge safety controller will reject shutdown if pond DO drops below 3.8 mg/L.'
           : action === 'EMERGENCY_OVERRIDE'
           ? 'Emergency Boost: Continuous 100% duty cycle, bypassing hysteresis.'
           : undefined,
@@ -111,15 +129,17 @@ export default function AerationScreen() {
   const executeCommand = async () => {
     setCommandLoading(true);
     try {
-      await aerationApi.controlAerator(confirmModal.aeratorId, confirmModal.action);
+      const res = await aerationApi.controlAerator(confirmModal.aeratorId, confirmModal.action);
+      const stage = res.command_status || 'EXECUTED';
+      const verified = res.verified_state || res.new_status || 'UNKNOWN';
       Alert.alert(
-        'Command Executed',
-        `Aerator ${confirmModal.aeratorCode}: ${confirmModal.action} accepted by controller.`
+        `Command ${stage}`,
+        `Aerator ${confirmModal.aeratorCode}: ${confirmModal.action} • Verified State: ${verified}`
       );
       setConfirmModal((prev) => ({ ...prev, visible: false }));
       loadData();
     } catch (e: any) {
-      Alert.alert('Command Rejected', e.message || 'Actuation command rejected.');
+      Alert.alert('Command Rejected', e.message || 'Actuation command rejected by safety interlock.');
     } finally {
       setCommandLoading(false);
     }
@@ -131,7 +151,7 @@ export default function AerationScreen() {
     <View style={styles.container}>
       <AppHeader
         title="Aeration Grid"
-        subtitle="40 Paddlewheels & Diffusers"
+        subtitle={`${summary?.total_aerators ?? '—'} Paddlewheels & Diffusers`}
         provenance={operatingMode}
         showBack
         onBack={() => router.back()}

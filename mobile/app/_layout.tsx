@@ -25,6 +25,7 @@ export default function RootLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const setOnlineStatus = useFarmStore((s) => s.setOnlineStatus);
   const updatePondLiveMetrics = useFarmStore((s) => s.updatePondLiveMetrics);
+  const updateFleetFromSnapshot = useFarmStore((s) => s.updateFleetFromSnapshot);
 
   useEffect(() => {
     // 1. Restore authenticated session from SecureStore
@@ -79,8 +80,10 @@ export default function RootLayout() {
     if (isAuthenticated) {
       notificationService.registerForPushNotificationsAsync();
       telemetrySocket.connect();
-      const unsubscribeTelemetry = telemetrySocket.subscribe('telemetry_update', (packet: any) => {
-        if (packet?.pond_id && packet?.metrics) {
+      const unsubscribeTelemetry = telemetrySocket.subscribe('TELEMETRY_UPDATE', (packet: any) => {
+        if (Array.isArray(packet?.ponds)) {
+          updateFleetFromSnapshot(packet.ponds, Boolean(packet.is_offline));
+        } else if (packet?.pond_id && packet?.metrics) {
           updatePondLiveMetrics(packet.pond_id, packet.metrics, packet.timestamp);
         }
       });
@@ -111,11 +114,14 @@ export default function RootLayout() {
               headerShown: false,
             }}
           />
+          <Stack.Screen name="water-quality/[pondId]" options={{ headerShown: false }} />
           <Stack.Screen name="feeding/index" options={{ headerShown: false }} />
+          <Stack.Screen name="feeding/history" options={{ headerShown: false }} />
           <Stack.Screen name="aeration/index" options={{ headerShown: false }} />
           <Stack.Screen name="disease/index" options={{ headerShown: false }} />
           <Stack.Screen name="climate/index" options={{ headerShown: false }} />
           <Stack.Screen name="devices/index" options={{ headerShown: false }} />
+          <Stack.Screen name="devices/[deviceId]" options={{ headerShown: false }} />
           <Stack.Screen name="reports/index" options={{ headerShown: false }} />
           <Stack.Screen name="settings/index" options={{ headerShown: false }} />
         </Stack>

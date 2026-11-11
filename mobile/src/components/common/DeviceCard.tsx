@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { theme } from '../../theme';
 import { IoTDeviceItem } from '../../types';
 import { StatusBadge } from './StatusBadge';
@@ -7,13 +7,14 @@ import { Battery, Wifi, Cpu, Clock } from 'lucide-react-native';
 
 interface DeviceCardProps {
   device: IoTDeviceItem;
+  onPress?: () => void;
 }
 
-export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
-  const isOnline = device.status === 'ONLINE';
+export const DeviceCard: React.FC<DeviceCardProps> = ({ device, onPress }) => {
+  const Container: any = onPress ? TouchableOpacity : View;
 
   return (
-    <View style={styles.card}>
+    <Container style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.topRow}>
         <View style={styles.idGroup}>
           <Cpu size={16} color={theme.colors.primary} />
@@ -47,7 +48,7 @@ export const DeviceCard: React.FC<DeviceCardProps> = ({ device }) => {
         </View>
         <Text style={styles.firmwareText}>{device.firmware_version}</Text>
       </View>
-    </View>
+    </Container>
   );
 };
 

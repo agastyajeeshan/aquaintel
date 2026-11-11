@@ -10,38 +10,59 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useForm, Controller } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '../../src/utils/zodResolver';
 import { authApi } from '../../src/services/api/auth.api';
 import { theme } from '../../src/theme';
 import { PrimaryButton } from '../../src/components/common/Buttons';
 import { ChevronLeft, AlertCircle, CheckCircle2 } from 'lucide-react-native';
 
+const registerSchema = z.object({
+  fullName: z.string().trim().optional(),
+  username: z.string().trim().min(3, 'Username must be at least 3 characters'),
+  email: z.string().trim().email('Please enter a valid email address'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  role: z.enum(['OPERATOR', 'FARM_MANAGER', 'VIEWER']),
+});
+
+type RegisterFormValues = z.infer<typeof registerSchema>;
+
 export default function RegisterScreen() {
   const router = useRouter();
-
-  const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState<'OPERATOR' | 'FARM_MANAGER' | 'VIEWER'>('OPERATOR');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const handleRegister = async () => {
-    if (!username.trim() || !email.trim() || !password) {
-      setError('Please fill in all required fields.');
-      return;
-    }
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: {
+      fullName: '',
+      username: '',
+      email: '',
+      password: '',
+      role: 'OPERATOR',
+    },
+  });
+
+  const selectedRole = watch('role');
+
+  const onSubmit = async (values: RegisterFormValues) => {
     setError(null);
     setLoading(true);
-
     try {
       await authApi.register({
-        username: username.trim(),
-        email: email.trim(),
-        password,
-        full_name: fullName.trim() || username.trim(),
-        role,
+        username: values.username.trim(),
+        email: values.email.trim(),
+        password: values.password,
+        full_name: values.fullName?.trim() || values.username.trim(),
+        role: values.role,
       });
       setSuccess(true);
       setTimeout(() => {
@@ -59,7 +80,7 @@ export default function RegisterScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <ChevronLeft size={24} color={theme.colors.textPrimary} />
           <Text style={styles.backText}>Back to Sign In</Text>
@@ -85,50 +106,77 @@ export default function RegisterScreen() {
         <View style={styles.formCard}>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="e.g. S. Ramanathan"
-              placeholderTextColor={theme.colors.textMuted}
+            <Controller
+              control={control}
+              name="fullName"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Enter full name"
+                  placeholderTextColor={theme.colors.textMuted}
+                />
+              )}
             />
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Username *</Text>
-            <TextInput
-              style={styles.input}
-              value={username}
-              onChangeText={setUsername}
-              placeholder="Choose username"
-              placeholderTextColor={theme.colors.textMuted}
-              autoCapitalize="none"
+            <Controller
+              control={control}
+              name="username"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Choose username"
+                  placeholderTextColor={theme.colors.textMuted}
+                  autoCapitalize="none"
+                />
+              )}
             />
+            {errors.username && <Text style={styles.fieldError}>{errors.username.message}</Text>}
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email Address *</Text>
-            <TextInput
-              style={styles.input}
-              value={email}
-              onChangeText={setEmail}
-              placeholder="name@aquaintel.farm"
-              placeholderTextColor={theme.colors.textMuted}
-              keyboardType="email-address"
-              autoCapitalize="none"
+            <Controller
+              control={control}
+              name="email"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="name@company.com"
+                  placeholderTextColor={theme.colors.textMuted}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              )}
             />
+            {errors.email && <Text style={styles.fieldError}>{errors.email.message}</Text>}
           </View>
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password *</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Minimum 6 characters"
-              placeholderTextColor={theme.colors.textMuted}
-              secureTextEntry
+            <Controller
+              control={control}
+              name="password"
+              render={({ field: { onChange, value } }) => (
+                <TextInput
+                  style={styles.input}
+                  value={value}
+                  onChangeText={onChange}
+                  placeholder="Minimum 6 characters"
+                  placeholderTextColor={theme.colors.textMuted}
+                  secureTextEntry
+                />
+              )}
             />
+            {errors.password && <Text style={styles.fieldError}>{errors.password.message}</Text>}
           </View>
 
           <View style={styles.inputGroup}>
@@ -137,10 +185,10 @@ export default function RegisterScreen() {
               {(['OPERATOR', 'FARM_MANAGER', 'VIEWER'] as const).map((r) => (
                 <TouchableOpacity
                   key={r}
-                  style={[styles.roleChip, role === r && styles.roleChipActive]}
-                  onPress={() => setRole(r)}
+                  style={[styles.roleChip, selectedRole === r && styles.roleChipActive]}
+                  onPress={() => setValue('role', r)}
                 >
-                  <Text style={[styles.roleChipText, role === r && styles.roleChipTextActive]}>
+                  <Text style={[styles.roleChipText, selectedRole === r && styles.roleChipTextActive]}>
                     {r.replace('_', ' ')}
                   </Text>
                 </TouchableOpacity>
@@ -150,7 +198,7 @@ export default function RegisterScreen() {
 
           <PrimaryButton
             title="Create Account"
-            onPress={handleRegister}
+            onPress={handleSubmit(onSubmit)}
             loading={loading}
             style={styles.submitBtn}
           />
@@ -247,6 +295,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     fontSize: 15,
     color: theme.colors.textPrimary,
+  },
+  fieldError: {
+    fontSize: 11,
+    color: theme.colors.critical,
+    marginTop: 4,
   },
   roleChips: {
     flexDirection: 'row',

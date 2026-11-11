@@ -1,6 +1,7 @@
 import { useAuthStore } from '../../src/store/authStore';
 import { authApi } from '../../src/services/api/auth.api';
 import { secureStorage } from '../../src/services/storage/secureStore';
+import { offlineDatabase } from '../../src/services/storage/database';
 
 jest.mock('../../src/services/api/auth.api');
 
@@ -59,7 +60,8 @@ describe('Auth Store & Secure Session Unit Tests', () => {
     expect(useAuthStore.getState().error).toBe('Incorrect username or password');
   });
 
-  test('logout purges token from SecureStore and resets auth state', async () => {
+  test('logout purges token from SecureStore, clears SQLite cache, and resets auth state', async () => {
+    const clearCacheSpy = jest.spyOn(offlineDatabase, 'clearAllCache').mockResolvedValueOnce();
     await secureStorage.setAccessToken('active_session_token');
     useAuthStore.setState({
       user: { id: 1, username: 'operator', full_name: 'Operator', role: 'OPERATOR', email: 'op@test.com' },
@@ -70,11 +72,13 @@ describe('Auth Store & Secure Session Unit Tests', () => {
 
     await useAuthStore.getState().logout();
 
+    expect(clearCacheSpy).toHaveBeenCalledTimes(1);
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
     expect(useAuthStore.getState().user).toBeNull();
     expect(useAuthStore.getState().token).toBeNull();
 
     const stored = await secureStorage.getAccessToken();
     expect(stored).toBeNull();
+    clearCacheSpy.mockRestore();
   });
 });

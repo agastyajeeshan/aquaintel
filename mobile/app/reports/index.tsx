@@ -7,9 +7,9 @@ import {
   RefreshControl,
   TouchableOpacity,
   Alert,
+  Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as Linking from 'expo-linking';
 import { reportsApi } from '../../src/services/api/reports.api';
 import { useFarmStore } from '../../src/store/farmStore';
 import { theme } from '../../src/theme';
@@ -25,6 +25,8 @@ export default function ReportsScreen() {
   const { operatingMode } = useFarmStore();
 
   const [report, setReport] = useState<DailyReportSummary | null>(null);
+  const [selectedPondFilter, setSelectedPondFilter] = useState<number | 'ALL'>('ALL');
+  const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,20 +54,25 @@ export default function ReportsScreen() {
   };
 
   const handleDownloadCsv = async () => {
+    setExporting(true);
     try {
-      const url = reportsApi.getCsvExportUrl();
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Download URL', `CSV report accessible at:\n${url}`);
-      }
+      const csvText = await reportsApi.downloadCsvReport();
+      await Share.share({
+        title: `AquaIntel Report (${report?.report_id || 'CSV'})`,
+        message: csvText,
+      });
     } catch (e: any) {
-      Alert.alert('Download Error', e.message || 'Failed to download report.');
+      Alert.alert('Export Failed', e.message || 'Failed to download CSV report.');
+    } finally {
+      setExporting(false);
     }
   };
 
   const exec = report?.executive_summary;
+  const filteredRows =
+    selectedPondFilter === 'ALL'
+      ? report?.pond_status_table || []
+      : (report?.pond_status_table || []).filter((r) => r.pond_number === selectedPondFilter);
 
   return (
     <View style={styles.container}>
@@ -105,9 +112,9 @@ export default function ReportsScreen() {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadCsv}>
+            <TouchableOpacity style={styles.downloadBtn} onPress={handleDownloadCsv} disabled={exporting}>
               <Download size={14} color="#FFFFFF" />
-              <Text style={styles.downloadBtnText}>Export CSV</Text>
+              <Text style={styles.downloadBtnText}>{exporting ? 'Exporting...' : 'Export CSV'}</Text>
             </TouchableOpacity>
           </View>
 
@@ -142,7 +149,7 @@ export default function ReportsScreen() {
                 title="Feed Dispensed"
                 value={exec.feed_dispensed_today_kg}
                 unit="kg"
-                subtitle="Across 10 feeders"
+                subtitle={`Across ${exec.total_ponds} ponds`}
                 status="NORMAL"
                 style={styles.kpiItem}
               />
@@ -161,6 +168,36 @@ export default function ReportsScreen() {
             <Text style={styles.sectionTitle}>Pond Status Audit</Text>
           </View>
 
+          {/* Pond Filter Chips */}
+          {report?.pond_status_table && report.pond_status_table.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+              <TouchableOpacity
+                style={[styles.filterChip, selectedPondFilter === 'ALL' && styles.filterChipActive]}
+                onPress={() => setSelectedPondFilter('ALL')}
+              >
+                <Text style={[styles.filterChipText, selectedPondFilter === 'ALL' && styles.filterChipTextActive]}>
+                  All Ponds
+                </Text>
+              </TouchableOpacity>
+              {report.pond_status_table.map((p) => (
+                <TouchableOpacity
+                  key={p.pond_number}
+                  style={[styles.filterChip, selectedPondFilter === p.pond_number && styles.filterChipActive]}
+                  onPress={() => setSelectedPondFilter(p.pond_number)}
+                >
+                  <Text
+                    style={[
+                      styles.filterChipText,
+                      selectedPondFilter === p.pond_number && styles.filterChipTextActive,
+                    ]}
+                  >
+                    P{String(p.pond_number).padStart(2, '0')}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
           <View style={styles.tableCard}>
             <View style={styles.tableHeaderRow}>
               <Text style={[styles.th, { flex: 1.2 }]}>POND</Text>
@@ -170,7 +207,7 @@ export default function ReportsScreen() {
               <Text style={[styles.th, { flex: 1.2, textAlign: 'right' }]}>STATUS</Text>
             </View>
 
-            {report?.pond_status_table?.map((row, idx) => (
+            {filteredRows.map((row, idx) => (
               <View key={idx} style={styles.tableRow}>
                 <Text style={[styles.td, styles.tdBold, { flex: 1.2 }]}>
                   Pond {String(row.pond_number).padStart(2, '0')}
@@ -319,5 +356,26 @@ const styles = StyleSheet.create({
   tdBold: {
     fontWeight: '700',
     color: theme.colors.primaryDark,
+  },
+  filterChip: {
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: theme.borderRadius.full,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    marginRight: 8,
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
   },
 });

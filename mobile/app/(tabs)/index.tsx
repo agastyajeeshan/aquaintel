@@ -14,7 +14,7 @@ import { theme } from '../../src/theme';
 import { AppHeader } from '../../src/components/common/AppHeader';
 import { MetricCard } from '../../src/components/common/MetricCard';
 import { StatusBadge } from '../../src/components/common/StatusBadge';
-import { OfflineBanner, LoadingState, ErrorState } from '../../src/components/common/FeedbackStates';
+import { OfflineBanner, LoadingState, ErrorState, LastUpdatedLabel } from '../../src/components/common/FeedbackStates';
 import {
   Waves,
   Wind,
@@ -77,7 +77,7 @@ export default function DashboardScreen() {
     <View style={styles.container}>
       <AppHeader
         title={overview?.farm_name || 'AquaIntel Farm'}
-        subtitle={overview?.location || 'Nellore, Andhra Pradesh'}
+        subtitle={overview?.location || 'Configured Farm Site'}
         provenance={operatingMode}
         onRefresh={onRefresh}
         isRefreshing={refreshing}
@@ -107,16 +107,20 @@ export default function DashboardScreen() {
         >
           {/* Welcome Strip */}
           <View style={styles.welcomeStrip}>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.greetingText}>
-                Hello, {user?.full_name || 'Farm Operator'}
+                Hello, {user?.full_name || user?.username || 'Farm Operator'}
               </Text>
               <Text style={styles.roleSubtext}>
-                Role: {user?.role || 'OPERATOR'} • 10 Hectare Delta Facility
+                Role: {user?.role || 'UNAUTHENTICATED'} •{' '}
+                {overview?.total_area_ha ? `${overview.total_area_ha} Hectares` : 'Farm Area Pending'}
+                {overview?.pending_maintenance ? ` • ${overview.pending_maintenance} Maintenance Pending` : ''}
               </Text>
             </View>
             <StatusBadge status={operatingMode} size="sm" />
           </View>
+
+          <LastUpdatedLabel timestamp={lastUpdated} provenance={operatingMode} />
 
           {/* Critical Alerts Banner (if any) */}
           {(overview?.active_alerts_count ?? 0) > 0 && (
@@ -141,40 +145,52 @@ export default function DashboardScreen() {
           {/* Primary Farm KPIs */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Fleet Overview KPIs</Text>
-            <Text style={styles.sectionMeta}>{overview?.total_ponds || 10} Ponds Total</Text>
+            <Text style={styles.sectionMeta}>
+              {overview ? `${overview.active_ponds ?? overview.total_ponds}/${overview.total_ponds} Active Ponds` : 'Loading'}
+            </Text>
           </View>
 
           <View style={styles.kpiGrid}>
             <MetricCard
               title="Total Biomass"
-              value={overview?.total_biomass_kg?.toLocaleString() || '12,500'}
+              value={overview?.total_biomass_kg != null ? overview.total_biomass_kg.toLocaleString() : '—'}
               unit="kg"
-              subtitle="Penaeus vannamei"
-              status="NORMAL"
+              subtitle={`${overview?.healthy_ponds ?? 0} Optimal • ${overview?.critical_ponds ?? 0} Critical`}
+              status={(overview?.critical_ponds ?? 0) > 0 ? 'CRITICAL' : 'NORMAL'}
               style={styles.kpiItem}
             />
             <MetricCard
               title="Today's Feed"
-              value={overview?.today_feed_kg?.toFixed(0) || '384'}
+              value={overview?.today_feed_kg != null ? overview.today_feed_kg.toFixed(1) : '—'}
               unit="kg"
-              subtitle="94% Consumption rate"
+              subtitle="Dispensed across ponds"
               status="NORMAL"
               style={styles.kpiItem}
             />
             <MetricCard
               title="Aerator Power"
-              value={overview?.energy_consumption_kwh?.toFixed(0) || '412'}
+              value={overview?.energy_consumption_kwh != null ? overview.energy_consumption_kwh.toFixed(1) : '—'}
               unit="kWh"
-              subtitle={`₹${overview?.energy_cost_inr || 3090} today`}
+              subtitle={
+                overview?.running_aerators != null
+                  ? `${overview.running_aerators}/${overview.total_aerators} Running • ₹${overview.energy_cost_inr}`
+                  : overview?.energy_cost_inr != null
+                  ? `₹${overview.energy_cost_inr} today`
+                  : 'Energy unavailable'
+              }
               status="NORMAL"
               style={styles.kpiItem}
             />
             <MetricCard
               title="IoT Devices"
-              value={overview?.devices_online_ratio || '11/11'}
+              value={overview?.devices_online_ratio || '—'}
               unit="Online"
-              subtitle="LoRaWAN IN865"
-              status="NORMAL"
+              subtitle={
+                overview?.disconnected_devices != null
+                  ? `${overview.disconnected_devices} Disconnected • ${overview.connectivity?.lora_gateway || 'Gateway'}`
+                  : 'Gateway status'
+              }
+              status={(overview?.disconnected_devices ?? 0) > 0 ? 'WARNING' : 'NORMAL'}
               style={styles.kpiItem}
             />
           </View>
@@ -271,7 +287,9 @@ export default function DashboardScreen() {
                 <Wind size={22} color="#0284C7" />
               </View>
               <Text style={styles.actionCardTitle}>Aeration Grid</Text>
-              <Text style={styles.actionCardSubtitle}>40 Aerators • Interlocks</Text>
+              <Text style={styles.actionCardSubtitle}>
+                {overview?.total_aerators ? `${overview.total_aerators} Aerators` : 'Aerators'} • Interlocks
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -283,7 +301,7 @@ export default function DashboardScreen() {
                 <Utensils size={22} color={theme.colors.primary} />
               </View>
               <Text style={styles.actionCardTitle}>Smart Feeding</Text>
-              <Text style={styles.actionCardSubtitle}>10 Feeders • Daily Quota</Text>
+              <Text style={styles.actionCardSubtitle}>Feeders • Daily Quota</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -307,7 +325,7 @@ export default function DashboardScreen() {
                 <Activity size={22} color={theme.colors.critical} />
               </View>
               <Text style={styles.actionCardTitle}>Disease Risks</Text>
-              <Text style={styles.actionCardSubtitle}>WSSV, EHP, EMS Assessment</Text>
+              <Text style={styles.actionCardSubtitle}>Stress & Bio-Security</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -319,7 +337,19 @@ export default function DashboardScreen() {
                 <Thermometer size={22} color="#D97706" />
               </View>
               <Text style={styles.actionCardTitle}>Weather & Climate</Text>
-              <Text style={styles.actionCardSubtitle}>Coastal Station • Rainfall</Text>
+              <Text style={styles.actionCardSubtitle}>Site Weather • Forecast</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.actionCard}
+              onPress={() => router.push('/devices')}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.actionIconBox, { backgroundColor: '#E0F7FA' }]}>
+                <Cpu size={22} color={theme.colors.secondary} />
+              </View>
+              <Text style={styles.actionCardTitle}>IoT Devices</Text>
+              <Text style={styles.actionCardSubtitle}>Gateways & Nodes</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

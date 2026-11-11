@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-// Resolve host: Android emulator uses 10.0.2.2, iOS / Web uses localhost
+// Resolve host: Android emulator uses 10.0.2.2; physical Android devices require EXPO_PUBLIC_API_URL LAN/HTTPS URL.
 const getLocalHost = () => {
   if (Platform.OS === 'android') {
     return '10.0.2.2:8000';
@@ -9,26 +9,24 @@ const getLocalHost = () => {
 };
 
 export const ENV = {
-  API_BASE_URL: process.env.EXPO_PUBLIC_API_URL || `http://${getLocalHost()}/api`,
+  API_BASE_URL: process.env.EXPO_PUBLIC_API_URL || `http://${getLocalHost()}/api/v1`,
   WS_BASE_URL: process.env.EXPO_PUBLIC_WS_URL || `ws://${getLocalHost()}/ws/telemetry`,
   DEMO_MODE: process.env.EXPO_PUBLIC_DEMO_MODE === 'true',
-  REQUEST_TIMEOUT_MS: 15000,
-  DEFAULT_FARM_ID: 1,
-  DEFAULT_LATITUDE: 14.4426,
-  DEFAULT_LONGITUDE: 79.9865,
+  REQUEST_TIMEOUT_MS: Number(process.env.EXPO_PUBLIC_REQUEST_TIMEOUT_MS) || 15000,
+  DEFAULT_FARM_ID: Number(process.env.EXPO_PUBLIC_DEFAULT_FARM_ID) || 1,
 };
 
 // Telemetry Freshness Thresholds
 export const FRESHNESS_THRESHOLD_MS = 60 * 1000; // 60 seconds
 export const STALE_WARNING_MS = 120 * 1000; // 2 minutes
 
-// Strict Edge Safety Interlocks
+// Strict Edge Safety Interlocks (Authoritative enforcement resides on backend/edge)
 export const SAFETY_INTERLOCKS = {
   EMERGENCY_HYPOXIA_DO_MIN: 3.8, // mg/L — Aerators cannot be turned OFF below this!
   FEEDING_LOCKOUT_DO_MIN: 4.0,   // mg/L — Feeders cannot dispense below this!
-  CRITICAL_HIGH_TEMP_C: 34.0,    // °C — Feeding reduced 50%
-  CRITICAL_LOW_TEMP_C: 24.0,     // °C — Feeding reduced 50%
-  CRITICAL_HIGH_AMMONIA: 0.10,   // mg/L TAN — Feeding reduced
+  CRITICAL_HIGH_TEMP_C: 34.0,    // °C — Feeding reduced
+  CRITICAL_LOW_TEMP_C: 24.0,     // °C — Feeding reduced
+  CRITICAL_HIGH_AMMONIA: 0.10,   // mg/L TAN — Feeding lockout
   OPTIMAL_PH_MIN: 7.5,
   OPTIMAL_PH_MAX: 8.3,
   OPTIMAL_DO_MIN: 5.0,
@@ -47,6 +45,7 @@ export interface WaterQualityConfig {
   criticalMin?: number;
   criticalMax?: number;
   decimals: number;
+  isAdvisoryDefault?: boolean;
 }
 
 export const WATER_QUALITY_LIMITS: Record<string, WaterQualityConfig> = {
@@ -57,6 +56,7 @@ export const WATER_QUALITY_LIMITS: Record<string, WaterQualityConfig> = {
     optimalMax: SAFETY_INTERLOCKS.OPTIMAL_DO_MAX,
     criticalMin: SAFETY_INTERLOCKS.EMERGENCY_HYPOXIA_DO_MIN,
     decimals: 2,
+    isAdvisoryDefault: true,
   },
   ph: {
     unit: 'pH',
@@ -66,6 +66,7 @@ export const WATER_QUALITY_LIMITS: Record<string, WaterQualityConfig> = {
     criticalMin: 7.0,
     criticalMax: 8.8,
     decimals: 2,
+    isAdvisoryDefault: true,
   },
   temperature: {
     unit: '°C',
@@ -75,6 +76,7 @@ export const WATER_QUALITY_LIMITS: Record<string, WaterQualityConfig> = {
     criticalMin: SAFETY_INTERLOCKS.CRITICAL_LOW_TEMP_C,
     criticalMax: SAFETY_INTERLOCKS.CRITICAL_HIGH_TEMP_C,
     decimals: 1,
+    isAdvisoryDefault: true,
   },
   salinity: {
     unit: 'ppt',
@@ -84,6 +86,7 @@ export const WATER_QUALITY_LIMITS: Record<string, WaterQualityConfig> = {
     criticalMin: 5.0,
     criticalMax: 35.0,
     decimals: 1,
+    isAdvisoryDefault: true,
   },
   ammonia: {
     unit: 'mg/L',
@@ -92,6 +95,7 @@ export const WATER_QUALITY_LIMITS: Record<string, WaterQualityConfig> = {
     optimalMax: 0.05,
     criticalMax: 0.10,
     decimals: 3,
+    isAdvisoryDefault: true,
   },
   turbidity: {
     unit: 'cm',
@@ -100,5 +104,16 @@ export const WATER_QUALITY_LIMITS: Record<string, WaterQualityConfig> = {
     optimalMax: 45.0,
     criticalMin: 20.0,
     decimals: 1,
+    isAdvisoryDefault: true,
+  },
+  water_level: {
+    unit: 'm',
+    name: 'Water Level',
+    optimalMin: 1.2,
+    optimalMax: 1.4,
+    criticalMin: 1.0,
+    criticalMax: 1.6,
+    decimals: 2,
+    isAdvisoryDefault: true,
   },
 };
