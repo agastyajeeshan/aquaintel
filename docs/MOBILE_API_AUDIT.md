@@ -9,7 +9,7 @@
 
 ## 1. Executive Summary
 
-An audit of the AquaIntel backend repository (`/Users/jeeshan/Documents/projects/aquaintel`) reveals **79 distinct API routes** (mounted under `/api/v1` and mirrored on `/api`), **1 WebSocket telemetry broadcaster** (`/ws/telemetry`), and **71 automated unit and integration tests** (all passing).
+An audit of the AquaIntel backend repository (`/Users/jeeshan/Documents/projects/aquaintel`) documents the REST routers (mounted under `/api/v1` and mirrored on `/api`), the WebSocket telemetry broadcaster (`/ws/telemetry`), and the **83 automated backend unit and integration tests** (`backend/tests/`, all passing after mobile stabilization and security/safety hardening).
 
 This audit maps every production endpoint into 13 functional domains, detailing HTTP methods, authentication requirements, user role permissions, request/response schemas, error status codes, and implementation/testing status.
 
@@ -22,9 +22,9 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 | HTTP Method | Path | Auth / Role | Request Schema | Response Schema | Error Codes | Implemented & Tested |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `POST` | `/api/v1/auth/login` | Public | `UserLogin` (`username`, `password`) | `Token` (`access_token`, `token_type`, `role`, `username`, `full_name`) | 400, 401, 422 | Yes (Tested in `test_phase2_core.py`) |
-| `POST` | `/api/v1/auth/register` | Public | `UserRegister` (`username`, `email`, `password`, `full_name`, `role`) | `Token` | 400, 422 | Yes (Tested in `test_phase2_core.py`) |
+| `POST` | `/api/v1/auth/register` | Public (Non-Admin) | `UserRegister` (`username`, `email`, `password`, `full_name`, `role`: `OPERATOR` \| `FARM_MANAGER` \| `VIEWER`) | `Token` (`ADMIN` self-registration rejected with `403`) | 400, 403, 422 | Yes (Tested in `test_auth_and_security.py`) |
 | `POST` | `/api/v1/auth/logout` | Bearer Token (`get_current_user`) | None | `{"status": "SUCCESS", "message": str}` | 401 | Yes (Tested in `test_phase2_core.py`) |
-| `GET` | `/api/v1/auth/me` | Bearer Token (`get_current_user`) | None | `{"id": int, "username": str, "email": str, "role": str, "full_name": str, "phone": str}` | 401 | Yes (Tested in `test_phase2_core.py`) |
+| `GET` | `/api/v1/auth/me` | Bearer Token (`get_current_user`) | None | `{"id": int, "username": str, "email": str, "role": str, "full_name": str, "phone": str, "farm_id": int?}` | 401 | Yes (Tested in `test_phase2_core.py`) |
 | `POST` | `/api/v1/auth/password-reset/request` | Public | `PasswordResetRequest` (`email`: EmailStr) | `{"status": "SENT", "message": str, "debug_token": str}` | 422 | Yes (Tested in `test_phase2_core.py`) |
 | `POST` | `/api/v1/auth/password-reset/confirm` | Public | `PasswordResetConfirm` (`token`: str, `new_password`: str) | `{"status": "SUCCESS", "message": str}` | 400, 404, 422 | Yes (Tested in `test_phase2_core.py`) |
 
@@ -34,7 +34,7 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 
 | HTTP Method | Path | Auth / Role | Request Schema | Response Schema | Error Codes | Implemented & Tested |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/farms/overview` | Public / Optional Token | None | `{"farm_name": str, "location": str, "total_area_ha": float, "total_ponds": int, "healthy_ponds": int, "warning_ponds": int, "critical_ponds": int, "total_biomass_kg": float, "today_feed_kg": float, "energy_consumption_kwh": float, "energy_cost_inr": float, "active_alerts_count": int, "devices_online_ratio": str}` | 500 | Yes (Tested in `test_foundation.py`) |
+| `GET` | `/api/v1/farms/overview` | Optional / Scoped Token | None | `{"farm_id": int, "farm_name": str, "location": str, "active_ponds": int, "connected_devices": int, "disconnected_devices": int, "running_aerators": int, "total_aerators": int, "pending_maintenance": int, "data_provenance": str, "is_simulated": bool, ...}` | 500 | Yes (Tested in `test_foundation.py`) |
 | `GET` | `/api/v1/analytics` | Public / Optional Token | None | `{"farm_summary": dict, "biomass_distribution": list, "energy_analytics": dict, "fcr_trends": list, "water_quality_matrix": list}` | 500 | Yes (Implemented in `analytics.py`) |
 | `GET` | `/api/v1/telemetry/latest` | Public / Optional Token | None | `{"fleet_telemetry": list[dict], "timestamp": str}` | 500 | Yes (Implemented in `telemetry.py`) |
 
@@ -46,7 +46,7 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/ponds` | Public / Optional Token | Query: `include_archived: bool = False` | `list[PondSummary]` (ID, pond_number, name, area_ha, water_volume_m3, status, water_quality, aerator_summary, feeding_summary, disease_risk) | 500 | Yes (Tested in `test_foundation.py`) |
 | `POST` | `/api/v1/ponds` | Public / Role: `ADMIN`, `FARM_MANAGER` | `PondCreate` (`pond_number`, `name`, `area_ha`, `water_volume_m3`, `shrimp_species`, `target_fcr`) | `PondDetail` | 400, 422 | Yes (Tested in `test_phase2_core.py`) |
-| `GET` | `/api/v1/ponds/{pond_id}` | Public / Optional Token | Path: `pond_id: int`, Query: `time_range: str = "24h"` | `PondDetail` (Pond metadata, water_quality snapshot, time-series history, equipment list, alerts) | 404, 422 | Yes (Tested in `test_phase2_core.py`) |
+| `GET` | `/api/v1/ponds/{pond_id}` | Optional / Scoped Token | Path: `pond_id: int`, Query: `time_range: "6h" \| "24h" \| "7d" \| "30d"` | `PondDetail` (`overview` w/ `provenance` & `is_stale`, `live_metrics` w/ `estimated_nh3`, `sensors`, `chart_series`, `feeding_history`, `aeration_events`) | 403, 404, 422 | Yes (Tested in `test_auth_and_security.py`) |
 | `PATCH` | `/api/v1/ponds/{pond_id}` | Public / Role: `ADMIN`, `FARM_MANAGER` | `PondUpdate` (Partial fields) | `PondDetail` | 404, 422 | Yes (Tested in `test_phase2_core.py`) |
 | `DELETE` | `/api/v1/ponds/{pond_id}` | Public / Role: `ADMIN` | Path: `pond_id: int` | `{"status": "ARCHIVED", "message": str}` | 404, 422 | Yes (Tested in `test_phase2_core.py`) |
 
@@ -68,9 +68,9 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 
 | HTTP Method | Path | Auth / Role | Request Schema | Response Schema | Error Codes | Implemented & Tested |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/feeding/status` | Public / Optional Token | None | `list[FeederItem]` (`id`, `pond_id`, `feeder_code`, `status`, `hopper_capacity_kg`, `current_feed_level_kg`, `dispensed_today_kg`, `recommended_today_kg`, `reduction_percentage`, `reduction_reason`) | 500 | Yes (Implemented in `feeding.py`) |
+| `GET` | `/api/v1/feeding/status` | Public / Optional Token | None | `{"total_daily_quota_kg": float, "total_dispensed_kg": float, "feeders": list[FeederItem], "recent_logs": list}` (includes `pond_do`, `is_stale`, `is_blocked`, `block_reason`) | 500 | Yes (Implemented in `feeding.py`) |
 | `POST` | `/api/v1/feeding/calculate` | Public / Optional Token | Query: `pond_id`, `biomass_kg`, `do_level`, `temperature`, `tray_feed_remaining_pct` | `{"recommended_daily_kg": float, "adjusted_ration_kg": float, "reduction_factor": float, "ration_reason": str, "feeding_schedule": list[dict]}` | 400, 422 | Yes (Implemented in `feeding.py`) |
-| `POST` | `/api/v1/feeding/{feeder_id}/control` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR` | `FeederControlRequest` (`action`: "START" \| "STOP" \| "DISPENSE" \| "SCHEDULE", `amount_kg: float?`, `schedule_time: str?`) | `{"feeder_id": int, "action": str, "status": str, "dispensed_kg": float, "timestamp": str}` | 400, 403, 404, 422 | Yes (Tested in `test_phase2_core.py`) |
+| `POST` | `/api/v1/feeding/{feeder_id}/control` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR` | `FeederControlRequest` (`action`: "START" \| "STOP" \| "DISPENSE" \| "SCHEDULE", `amount_kg: float?`, `schedule_time: str?`) | `{"feeder_id": int, "action": str, "status": str, "dispensed_kg": float, "timestamp": str}` (`409` on hypoxia/ammonia/stale/quota lockouts) | 400, 403, 404, 409, 422 | Yes (Tested in `test_auth_and_security.py`) |
 
 ---
 
@@ -78,8 +78,8 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 
 | HTTP Method | Path | Auth / Role | Request Schema | Response Schema | Error Codes | Implemented & Tested |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/aeration/status` | Public / Optional Token | None | `list[AeratorItem]` (`id`, `pond_id`, `aerator_code`, `aerator_type`, `power_rating_kw`, `status`: "RUNNING" \| "STANDBY" \| "STOPPED" \| "EMERGENCY", `mode`: "AUTO" \| "MANUAL", `pond_do`: float, `runtime_hours_today`: float) | 500 | Yes (Implemented in `aeration.py`) |
-| `POST` | `/api/v1/aeration/{aerator_id}/control` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR` | `AeratorControlRequest` (`action`: "START" \| "STOP" \| "SWITCH_MODE", `mode: str?`, `reason: str?`) | `{"aerator_id": int, "action": str, "new_status": str, "power_kw": float, "timestamp": str}` | 400, 403, 404, 422 | Yes (Tested in `test_control_and_ai.py`) |
+| `GET` | `/api/v1/aeration/status` | Public / Optional Token | None | `{"total_power_kw": float, "aerators": list[AeratorItem], "recent_events": list}` | 500 | Yes (Implemented in `aeration.py`) |
+| `POST` | `/api/v1/aeration/{aerator_id}/control` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR` | `AeratorControlRequest` (`action`: "START" \| "STOP" \| "SWITCH_MODE", `mode: str?`, `reason: str?`) | `{"aerator_id": int, "action": str, "command_status": str, "verified_state": str, "pond_do": float}` (`409` on hypoxia/offline lockout) | 400, 403, 404, 409, 422 | Yes (Tested in `test_auth_and_security.py`) |
 
 ---
 
@@ -110,7 +110,7 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 
 | HTTP Method | Path | Auth / Role | Request Schema | Response Schema | Error Codes | Implemented & Tested |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| `GET` | `/api/v1/climate/weather/current` | Public / Optional Token | None | `WeatherObservation` (`temperature_c`, `relative_humidity_pct`, `rainfall_mm`, `wind_speed_kmh`, `weather_condition`, `location_name`) | 500 | Yes (Tested in `test_climate_adaptation.py`) |
+| `GET` | `/api/v1/climate/weather/current` | Public / Optional Token | None | `{"status": str, "weather": WeatherObservation, "location_name": str, "provider": str, "is_simulated": bool}` | 500 | Yes (Tested in `test_climate_adaptation.py`) |
 | `GET` | `/api/v1/climate/weather/forecast` | Public / Optional Token | Query: `horizons_hours: int = 72` | `{"hourly_forecast": list[dict], "source": str, "cache_hit": bool}` | 500 | Yes (Tested in `test_climate_adaptation.py`) |
 | `GET` | `/api/v1/climate/ponds/{pond_id}/analysis` | Public / Optional Token | Path: `pond_id: int` | `{"pond_id": int, "stratification_risk": str, "hypoxia_probability": float, "salinity_shock_risk": str}` | 404, 422 | Yes (Tested in `test_climate_adaptation.py`) |
 | `GET` | `/api/v1/climate/ponds/{pond_id}/recommendations` | Public / Optional Token | Path: `pond_id: int` | `list[ClimateRecommendation]` (`action_type`, `priority`, `reason`, `impact_score`, `approved`: bool) | 404, 422 | Yes (Tested in `test_climate_adaptation.py`) |
@@ -125,6 +125,8 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
 | `GET` | `/api/v1/disease/risks` | Public / Optional Token | Query: `pond_id: int?` | `list[DiseaseRiskAssessment]` (WSSV, EHP, EMS_AHPND, Vibriosis scores 0-100, contributor factors, biosecurity recommendations) | 422 | Yes (Implemented in `disease.py`) |
 | `POST` | `/api/v1/disease/evaluate` | Public / Optional Token | `DiseaseEvaluationInput` (`water_quality`: dict, `biomass_kg`: float, `mortality_rate`: float) | `DiseaseRiskAssessment` | 400, 422 | Yes (Implemented in `disease.py`) |
+| `GET` | `/api/v1/disease/observations` | Optional Token | Query: `pond_id: int?` | `list[HealthObservationItem]` | 422 | Yes (Tested in `test_auth_and_security.py`) |
+| `POST` | `/api/v1/disease/observations` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR` | `HealthObservationCreate` (`pond_id`, `symptom`, `severity`, `mortality_count`, `notes`) | `HealthObservationItem` (Persisted + logged to `AuditLog`) | 403, 404, 422 | Yes (Tested in `test_auth_and_security.py`) |
 | `GET` | `/api/v1/ai/models/status` | Public / Optional Token | None | `{"model_id": str, "version": str, "status": str, "synthetic_data_flag": bool, "classes": list, "model_card_url": str}` | 500 | Yes (Tested in `test_ai_dataset_pipeline.py`) |
 | `GET` | `/api/v1/ai/data/quality-report` | Public / Optional Token | None | `{"dataset_inventory": list, "quality_score": float, "class_distribution": dict, "provenance": str}` | 500 | Yes (Tested in `test_ai_dataset_pipeline.py`) |
 | `POST` | `/api/v1/ai/data/validate` | Role: `ADMIN`, `FARM_MANAGER` | None | `{"status": "VALIDATED", "samples_checked": int, "anomalies_detected": int}` | 500 | Yes (Tested in `test_ai_dataset_pipeline.py`) |
@@ -142,6 +144,7 @@ This audit maps every production endpoint into 13 functional domains, detailing 
 | `POST` | `/api/v1/alerts/{alert_id}/acknowledge` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR` | Path: `alert_id: int` | `{"alert_id": int, "status": "ACKNOWLEDGED", "acknowledged_at": str}` | 404, 422 | Yes (Implemented in `alerts.py`) |
 | `POST` | `/api/v1/alerts/{alert_id}/resolve` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR` | Path: `alert_id: int` | `{"alert_id": int, "status": "RESOLVED", "resolved_at": str}` | 404, 422 | Yes (Implemented in `alerts.py`) |
 | `POST` | `/api/v1/alerts/{alert_id}/ignore` | Role: `ADMIN`, `FARM_MANAGER` | Path: `alert_id: int` | `{"alert_id": int, "status": "IGNORED"}` | 404, 422 | Yes (Implemented in `alerts.py`) |
+| `POST` | `/api/v1/alerts/push-token` | Role: `ADMIN`, `FARM_MANAGER`, `OPERATOR`, `VIEWER` | `PushTokenRegister` (`token`, `platform`, `device_id`) | `{"status": "REGISTERED", "token": str}` | 401, 422 | Yes (Tested in `test_notifications.py`) |
 
 ---
 

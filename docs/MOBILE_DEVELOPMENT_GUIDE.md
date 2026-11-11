@@ -1,8 +1,8 @@
 # AquaIntel Android Mobile — Development & Engineering Guide
 
 **Technology:** React Native (Expo SDK 52) • TypeScript • Expo Router • TanStack Query • Zustand • Expo SQLite  
-**Target:** Android (SDK 34+)  
-**Application ID:** `com.aquaintel.mobile`  
+**Target:** Android (minSdkVersion: 24, targetSdkVersion: 34)  
+**Application ID:** `com.aquaintel.mobile`
 
 ---
 
@@ -11,9 +11,9 @@
 Ensure the following tools are installed:
 - **Node.js:** 18+ (Verified on v24.22.1)
 - **npm:** 9+ (Verified on 11.19.1)
-- **Python:** 3.10+ (Verified on 3.15.1 for FastAPI backend)
+- **Python:** 3.10+ (Verified on 3.15.1 for FastAPI backend via `backend/venv`)
 - **Expo CLI:** Built-in via `npx expo`
-- **Android Studio / Android SDK:** (Optional for local emulator execution, build tools SDK 34+)
+- **Android Studio / Android SDK / EAS CLI:** Optional for local Hermes export and Jest verification; required if compiling `.apk` / `.aab` binaries locally (`npx expo prebuild` + Gradle) or via EAS cloud builds.
 
 ---
 
@@ -26,7 +26,7 @@ cd backend
 source venv/bin/activate
 python run.py
 ```
-- API Base: `http://localhost:8000/api`
+- API Base: `http://localhost:8000/api/v1` (legacy `/api` also mounted)
 - Interactive Swagger: `http://localhost:8000/docs`
 - WebSocket Telemetry: `ws://localhost:8000/ws/telemetry`
 
@@ -36,9 +36,9 @@ Copy the example environment file:
 cd mobile
 cp .env.example .env
 ```
-Default `.env` configuration:
+Default `.env.example` configuration:
 ```ini
-EXPO_PUBLIC_API_URL=http://10.0.2.2:8000/api
+EXPO_PUBLIC_API_URL=http://10.0.2.2:8000/api/v1
 EXPO_PUBLIC_WS_URL=ws://10.0.2.2:8000/ws/telemetry
 EXPO_PUBLIC_DEMO_MODE=true
 EXPO_PUBLIC_DEFAULT_FARM_ID=1
@@ -59,7 +59,7 @@ npm run start
 From the interactive terminal menu:
 - Press `a` to open on an active Android emulator or connected device via ADB.
 - Press `w` to open in browser web preview.
-- Scan the displayed QR code with the **Expo Go** app on a physical Android device connected to the same LAN.
+- Scan the displayed QR code with **Expo Go** on a physical Android device connected to the same LAN.
 
 ---
 
@@ -67,19 +67,19 @@ From the interactive terminal menu:
 
 ### A. Android Emulator (Standard Google APIs Image)
 The Android QEMU emulator runs behind a virtual router.
-- Use `http://10.0.2.2:8000/api` for HTTP.
+- Use `http://10.0.2.2:8000/api/v1` for HTTP.
 - Use `ws://10.0.2.2:8000/ws/telemetry` for WebSocket.
 - Do NOT use `localhost` or `127.0.0.1`.
 
 ### B. Physical Android Device (Over Wi-Fi)
 1. Find your development laptop's local LAN IP:
    ```bash
-   ipconfig getifaddr en0 # On macOS (e.g., 192.168.1.45)
+   ipconfig getifaddr en0
    ```
 2. Update `mobile/.env`:
    ```ini
-   EXPO_PUBLIC_API_URL=http://192.168.1.45:8000/api
-   EXPO_PUBLIC_WS_URL=ws://192.168.1.45:8000/ws/telemetry
+   EXPO_PUBLIC_API_URL=http://<YOUR_LAN_IP>:8000/api/v1
+   EXPO_PUBLIC_WS_URL=ws://<YOUR_LAN_IP>:8000/ws/telemetry
    ```
 3. Ensure your workstation firewall permits inbound traffic on port 8000.
 
@@ -88,20 +88,15 @@ If Wi-Fi communication is restricted:
 ```bash
 adb reverse tcp:8000 tcp:8000
 ```
-Then configure `EXPO_PUBLIC_API_URL=http://localhost:8000/api`.
+Then configure `EXPO_PUBLIC_API_URL=http://localhost:8000/api/v1`.
 
 ---
 
-## 4. Operational Demo User Accounts
+## 4. User Accounts & Role Provisioning
 
-The local development backend comes pre-seeded with 4 standard commercial farm accounts:
-
-| Role | Username | Password | Full Name & Operational Scope |
-|---|---|---|---|
-| **Operator** | `operator` | `operator123` | B. Venkat (Shift Field Lead) — Pond inspections, feeder bursts, aeration commands |
-| **Farm Manager** | `manager` | `farm123` | V. Naresh (Farm GM) — Quota approvals, fleet oversight, alert triage |
-| **Admin** | `admin` | `admin123` | Dr. K. Srinivas (Agritech Director) — Full system access, audit logs, user management |
-| **Viewer** | `viewer` | `viewer123` | Rajiv Menon (Analyst) — Read-only telemetry, reports, and charts |
+No credentials or quick-fill passwords are stored inside the mobile application. To sign in during local development or staging:
+- Use the **Register** screen (`app/(auth)/register.tsx` -> `POST /api/v1/auth/register`) to create an `OPERATOR`, `FARM_MANAGER`, or `VIEWER` account.
+- Public self-registration of `ADMIN` accounts is blocked server-side (`403 Forbidden`); administrative accounts must be provisioned on the backend server or database initializer.
 
 ---
 
@@ -111,5 +106,5 @@ Inside `mobile/`:
 - `npm run start`: Starts Metro bundler.
 - `npm run android`: Starts Metro and attempts ADB launch.
 - `npm run typecheck`: Runs `tsc --noEmit` across all screens and components.
-- `npm test`: Runs Jest unit, component, and safety test suites.
+- `npm test`: Runs Jest unit and component test suites.
 - `npm run test:coverage`: Generates code coverage report.

@@ -8,18 +8,22 @@ This document details the automated testing architecture, test suites, and quali
 
 AquaIntel utilizes a multi-layered testing strategy:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                   AQUAINTEL MOBILE TEST TIERS               │
 │                                                             │
-│   [ Unit Tests ]          - Store State, Safety Interlocks  │
-│                           - Freshness Rules, Data Adapters  │
+│   [ Unit Tests ]          - Auth & SQLite Cache Purge       │
+│                           - Safety Interlocks & Freshness   │
+│                           - FarmStore Snapshots & Provenance│
+│                           - Notification Token Registration │
+│                           - Axios Client & ZodResolver      │
 │                                                             │
-│   [ Component Tests ]     - RNTL Card & Gauge Rendering     │
-│                           - Modal Confirmations, Badge States│
+│   [ Component Tests ]     - RNTL Cards, ChartCard & Nav Bar │
+│                           - Modal Confirmations, Login Form │
 │                                                             │
-│   [ Non-Regression ]      - Backend Pytest Suite (71 Tests) │
-│                           - Frontend Web Build (0 Errors)   │
+│   [ Non-Regression ]      - Backend Pytest Suite (83 Tests) │
+│                           - Frontend Web Build & oxlint     │
+│                           - Expo Android Hermes Export      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -28,64 +32,51 @@ AquaIntel utilizes a multi-layered testing strategy:
 ## 2. Executing Automated Tests
 
 ### 2.1 Mobile Test Suite (Jest & React Native Testing Library)
-Run all mobile unit and component tests:
 ```bash
-cd mobile
-npm test
+cd mobile && npm test
 ```
 
-### 2.2 Test Coverage Analysis
+### 2.2 TypeScript Static Typecheck
 ```bash
-cd mobile
-npm run test:coverage
+cd mobile && npm run typecheck
+```
+Executes `tsc --noEmit` across all screens, Expo Router files, stores, API clients, and tests.
+
+### 2.3 Android Hermes Bundle Compilation
+```bash
+cd mobile && HOME=/tmp EXPO_NO_TELEMETRY=1 npx expo export --platform android --output-dir dist-android && rm -rf dist-android
 ```
 
-### 2.3 TypeScript Static Typecheck
+### 2.4 Backend & Web Non-Regression Verification
 ```bash
-cd mobile
-npm run typecheck
-```
-Executes `tsc --noEmit` across all screens, router files, state stores, and shared components.
+# Backend automated pytest suite (83 tests)
+backend/venv/bin/pytest backend/tests
 
-### 2.4 End-to-End Non-Regression Verification
-Verify that backend APIs and web frontend remain fully operational:
-```bash
-# 1. Backend 71-test automated suite
-backend/venv/bin/pytest backend/tests -v
-
-# 2. Frontend React 19 build validation
-cd frontend && npm run build
+# Frontend React 19 production build & lint
+cd frontend && npm run build && npm run lint
 ```
 
 ---
 
 ## 3. Test Suites Inventory
 
-| Test File | Scope | Test Cases | Status |
+| Test File | Scope | Verified Coverage | Status |
 |---|---|---|---|
-| `tests/unit/auth.test.ts` | Session & SecureStore | Login success, token persistence, error handling, session restoration, logout cache clearing | **PASS** |
-| `tests/unit/safety.test.ts` | Safety Interlocks | Hypoxia lockout (DO < 3.8 mg/L blocks Stop), Feeding lockout (DO < 4.0 mg/L blocks Dispense), Freshness window (> 60s marked stale) | **PASS** |
-| `tests/unit/farmStore.test.ts` | State Machine | Telemetry injection, offline detection, provenance derivation (LIVE, STALE, CACHED, OFFLINE) | **PASS** |
-| `tests/unit/apiClient.test.ts` | Networking | Default timeouts, headers, device UUID idempotency key generator | **PASS** |
-| `tests/components/components.test.tsx` | UI Components | `StatusBadge` states, `MetricCard` formatting, `ConfirmationDialog` safety notice and callbacks, `SensorStatusCard` critical ranges | **PASS** |
+| `tests/unit/auth.test.ts` | Session & Storage | Login success, SecureStore token persistence, error handling, logout `offlineDatabase.clearAllCache()` & session purge | **PASS** |
+| `tests/unit/safety.test.ts` | Safety Interlocks | Hypoxia lockout (`DO < 3.8 mg/L` blocks Stop), Feeding lockout (`DO < 4.0 mg/L` blocks Dispense), Freshness window (`> 60s` stale), offline guard | **PASS** |
+| `tests/unit/farmStore.test.ts` | State Machine | Live metric updates, offline transition, provenance derivation (`LIVE`, `STALE`, `CACHED`, `OFFLINE`) | **PASS** |
+| `tests/unit/storeAndLogin.test.tsx` | Snapshots, Form & Auth UI | `updateFleetFromSnapshot` (`DEMO`/`STALE`/`OFFLINE`), `zodResolver`, `LoginScreen` validation & absence of hardcoded demo credentials | **PASS** |
+| `tests/unit/notifications.test.ts` | Push Notifications | Android notification channels & graceful skip when Play Services / push provider unavailable | **PASS** |
+| `tests/unit/apiClient.test.ts` | Networking | Default timeouts, platform headers, idempotency UUID generator | **PASS** |
+| `tests/components/components.test.tsx` | UI Components | `StatusBadge`, `MetricCard`, `ConfirmationDialog`, `SensorStatusCard` (normal/critical/unavailable/stale `water_level`), `ChartCard`, `BottomNavigation` | **PASS** |
 
 ---
 
-## 4. Manual QA Test Matrix for Android Devices
+## 4. Manual QA Checklist for Physical Android / Emulator Environments
 
-When testing on an Android device or emulator, verify the following checklist:
+Because `adb`, Android Emulator, Gradle, and `eas` CLI are not installed on the current macOS development workstation, the following checks must be performed on an Android device or emulator environment prior to field release:
 
-### A. Navigation & Back Handling
-- Pressing the Android hardware / gesture back button on detail pages (`/ponds/4`, `/feeding`, `/aeration`) returns smoothly to the previous tab without exiting the app.
-- Back button on root tab screens minimizes the app cleanly according to Android OS conventions.
-
-### B. Outdoor Sunlight Legibility
-- Light theme high contrast verified: `#247653` primary green against `#F6F8F6` background.
-- Large metric readouts (32sp / 24sp) remain legible under direct outdoor sunlight on pond dikes.
-
-### C. Offline Behavior & Graceful Degradation
-1. Open the app with Wi-Fi connected to sync live telemetry.
-2. Toggle Android Airplane Mode.
-3. Verify `OfflineBanner` appears immediately with exact last-synced timestamp.
-4. Verify all aerator and feeder action buttons raise an "Offline Action Blocked" alert rather than hanging or dispatching queued commands.
-5. Disable Airplane Mode; verify automatic reconnection and WebSocket resumption.
+1. **Navigation & Android Back Gesture:** Verify hardware/gesture back behavior across nested routes (`/ponds/[pondId]`, `/water-quality/[pondId]`, `/devices/[deviceId]`, `/feeding/history`) and root tabs.
+2. **Real-Time LAN / Emulator Networking:** Configure `EXPO_PUBLIC_API_URL` and `EXPO_PUBLIC_WS_URL`, toggle Airplane Mode to verify `OfflineBanner` and actuator lockout, and restore Wi-Fi/cellular to verify WebSocket resumption.
+3. **Outdoor Daylight Legibility & Charts:** Inspect high-contrast light theme (`#247653` on `#F6F8F6`) and SVG line/band chart gestures under sunlight.
+4. **End-to-End Push Delivery:** Configure Google Firebase Cloud Messaging (FCM V1) in EAS and test physical device notification receipt.
