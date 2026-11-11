@@ -258,3 +258,63 @@ def test_push_token_registration_and_persistence():
         db.query(DevicePushToken).filter(DevicePushToken.token == test_token).delete()
         db.commit()
         db.close()
+
+def test_public_registration_blocks_admin_escalation():
+    """Verify anonymous self-registration cannot create ADMIN accounts."""
+    res = client.post("/api/v1/auth/register", json={
+        "username": f"attacker_{uuid.uuid4().hex[:6]}",
+        "email": f"attacker_{uuid.uuid4().hex[:6]}@aquaintel.io",
+        "password": "password123",
+        "role": "ADMIN"
+    })
+    assert res.status_code == 403
+
+def test_backend_safety_interlocks_for_aeration_and_feeding():
+    """Verify backend enforces hypoxia lockouts on aerator STOP and feeder DISPENSE."""
+    from app.core.iot_simulator import iot_simulator
+    operator_token = create_access_token({"sub": "operator", "role": "OPERATOR", "user_id": 3})
+    headers = {"Authorization": f"Bearer {operator_token}"}
+
+    try:
+        # Inject critical low DO (< 3.0 mg/L) in Pond 1
+        iot_simulator.inject_event(1, "CRITICAL_LOW_DO")
+
+        # Aerator STOP must be rejected (409) when DO < 3.8 mg/L
+        res_aer = client.post("/api/v1/aeration/1/control", json={"action": "STOP"}, headers=headers)
+        assert res_aer.status_code == 409
+        assert "Safety lockout" in res_aer.json()["detail"]
+
+        # Feeder DISPENSE must be rejected (409) when DO < 4.0 mg/L
+        res_feed = client.post("/api/v1/feeding/1/control", json={"action": "DISPENSE", "amount_kg": 3.0}, headers=headers)
+        assert res_feed.status_code == 409
+        assert "Feeding safety lockout" in res_feed.json()["detail"]
+    finally:
+        iot_simulator.reset_all_events()
+
+def test_pond_detail_includes_6h_sensors_nh3_and_disease_observations():
+    """Verify 6h pond range, sensors, backend NH3 calculation, and health observation logging."""
+    operator_token = create_access_token({"sub": "operator", "role": "OPERATOR", "user_id": 3})
+    headers = {"Authorization": f"Bearer {operator_token}"}
+
+    res_detail = client.get("/api/v1/ponds/1?time_range=6h", headers=headers)
+    assert res_detail.status_code == 200
+    detail = res_detail.json()
+    assert detail["time_range"] == "6h"
+    assert len(detail["sensors"]) >= 1
+    assert "estimated_nh3" in detail["live_metrics"]
+    assert detail["live_metrics"]["estimated_nh3"]["calculated"] is True
+
+    res_obs = client.post("/api/v1/disease/observations", json={
+        "pond_id": 1,
+        "symptoms": ["Lethargic swimming", "Soft shell"],
+        "mortality_observed": 2,
+        "feeding_response": "REDUCED",
+        "observation_type": "FARMER_OBSERVED",
+        "notes": "Morning check tray inspection"
+    }, headers=headers)
+    assert res_obs.status_code == 201
+    assert res_obs.json()["status"] == "SUCCESS"
+
+    res_list = client.get("/api/v1/disease/observations?pond_id=1", headers=headers)
+    assert res_list.status_code == 200
+    assert any("Morning check tray inspection" == item.get("notes") for item in res_list.json())

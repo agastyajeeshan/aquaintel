@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 
 from ..database import get_db
-from ..models import Pond, Sensor, ClimateAdaptationEvent, WeatherObservation, WeatherForecast
+from ..models import Farm, Pond, Sensor, ClimateAdaptationEvent, WeatherObservation, WeatherForecast
 from ..core.weather_service import weather_service, WeatherData
 from ..core.climate_engine import climate_engine
 from ..core.predictive_models import PondPredictiveEngine
@@ -27,12 +27,16 @@ class OperatorApprovalRequest(BaseModel):
     notes: Optional[str] = None
 
 @router.get("/weather/current")
-def get_current_weather():
+def get_current_weather(db: Session = Depends(get_db)):
     """Returns current real-time or cached weather conditions with provider metadata."""
+    farm = db.query(Farm).first()
     weather = weather_service.get_current_weather()
+    weather_dict = weather.to_dict()
+    weather_dict["location_name"] = farm.location if farm else "Configured Farm Location"
     return {
         "status": "SUCCESS",
-        "weather": weather.to_dict(),
+        "weather": weather_dict,
+        "location_name": weather_dict["location_name"],
         "provider": weather.provider_name,
         "is_simulated": weather.is_simulated,
         "data_freshness_seconds": weather.data_freshness_seconds

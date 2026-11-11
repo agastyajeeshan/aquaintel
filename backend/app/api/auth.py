@@ -51,6 +51,18 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 
 @router.post("/register", response_model=Token)
 def register(user_in: UserRegister, db: Session = Depends(get_db)):
+    requested_role = (user_in.role or "OPERATOR").upper()
+    if requested_role == "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Administrator accounts cannot be created via public self-registration"
+        )
+    if requested_role not in {"OPERATOR", "FARM_MANAGER", "VIEWER"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid role for self-registration. Allowed: OPERATOR, FARM_MANAGER, VIEWER"
+        )
+
     existing = db.query(User).filter(
         (User.username == user_in.username) | (User.email == user_in.email)
     ).first()
@@ -64,7 +76,8 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         email=user_in.email,
         hashed_password=hashed,
         full_name=user_in.full_name or user_in.username.title(),
-        role=user_in.role or "OPERATOR"
+        role=requested_role,
+        farm_id=1
     )
     db.add(new_user)
     db.commit()
@@ -115,7 +128,8 @@ def get_me(current_user: User = Depends(get_current_user)):
         "email": current_user.email,
         "role": current_user.role,
         "full_name": current_user.full_name,
-        "phone": current_user.phone
+        "phone": current_user.phone,
+        "farm_id": current_user.farm_id
     }
 
 @router.post("/password-reset/request")

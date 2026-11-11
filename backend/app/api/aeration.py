@@ -92,27 +92,64 @@ def control_aerator(
     if not aerator:
         raise HTTPException(status_code=404, detail="Aerator not found")
 
-    now = datetime.utcnow()
-    new_status = aerator.status
-    action_name = cmd.action
+    sim_data = iot_simulator.generate_current_pond_readings(aerator.pond_id)
+    current_do = sim_data["metrics"]["do"]["value"]
+    is_stale = sim_data.get("is_stale", False)
+    sensor_offline = sim_data.get("sensor_health") == "OFFLINE"
 
-    if cmd.action == "START":
+    now = datetime.utcnow()
+    action_name = cmd.action.upper()
+
+    # Backend safety supremacy: prohibit stopping aerators during hypoxia or telemetry loss
+    if action_name == "STOP":
+        if sensor_offline or is_stale:
+            db.add(AuditLog(
+                user_id=current_user.id,
+                username=current_user.username,
+                action="AERATOR_COMMAND_REJECTED",
+                resource_type="AERATOR",
+                resource_id=str(aerator.id),
+                details={"action": action_name, "reason": "TELEMETRY_UNAVAILABLE_OR_STALE", "pond_id": aerator.pond_id}
+            ))
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Safety lockout: Cannot stop aerator while pond DO probe is offline or stale."
+            )
+        if current_do < aeration_controller.DO_EMERGENCY_THRESHOLD:
+            db.add(AuditLog(
+                user_id=current_user.id,
+                username=current_user.username,
+                action="AERATOR_COMMAND_REJECTED",
+                resource_type="AERATOR",
+                resource_id=str(aerator.id),
+                details={"action": action_name, "reason": "EMERGENCY_HYPOXIA_LOCKOUT", "pond_do": current_do, "pond_id": aerator.pond_id}
+            ))
+            db.commit()
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Safety lockout: Cannot stop aerator while Pond DO ({current_do:.2f} mg/L) is below emergency threshold ({aeration_controller.DO_EMERGENCY_THRESHOLD:.2f} mg/L)."
+            )
+
+    new_status = aerator.status
+
+    if action_name == "START":
         new_status = "RUNNING"
         aerator.mode = "MANUAL"
         trigger_msg = f"Manual start override triggered by {current_user.full_name or current_user.username}."
-    elif cmd.action == "STOP":
+    elif action_name == "STOP":
         new_status = "STANDBY"
         aerator.mode = "MANUAL"
         trigger_msg = f"Manual stop command issued by {current_user.full_name or current_user.username}."
-    elif cmd.action == "EMERGENCY_OVERRIDE":
+    elif action_name == "EMERGENCY_OVERRIDE":
         new_status = "RUNNING"
         aerator.mode = "EMERGENCY"
         trigger_msg = f"EMERGENCY OVERRIDE: Forced full throttle operation by {current_user.full_name or current_user.username}."
-    elif cmd.action == "AUTO":
+    elif action_name == "AUTO":
         aerator.mode = "SMART_HYSTERESIS"
         trigger_msg = "Switched to automated smart hysteresis algorithm."
     else:
-        trigger_msg = f"Actuator command {cmd.action} applied."
+        raise HTTPException(status_code=400, detail=f"Unsupported aerator command action '{cmd.action}'")
 
     aerator.status = new_status
     aerator.last_state_change = now
@@ -122,7 +159,7 @@ def control_aerator(
         aerator_id=aerator.id,
         action=action_name,
         trigger_reason=trigger_msg,
-        trigger_do_level=6.2,
+        trigger_do_level=current_do,
         duration_minutes=0.0,
         timestamp=now
     )
@@ -133,16 +170,19 @@ def control_aerator(
         action="AERATOR_COMMAND",
         resource_type="AERATOR",
         resource_id=str(aerator.id),
-        details={"action": action_name, "pond_id": aerator.pond_id, "mode": aerator.mode}
+        details={"action": action_name, "pond_id": aerator.pond_id, "mode": aerator.mode, "pond_do": current_do}
     ))
     db.commit()
     db.refresh(aerator)
 
     return {
         "status": "SUCCESS",
+        "command_status": "EXECUTED",
+        "verified_state": aerator.status,
         "aerator_id": aerator.id,
         "code": aerator.aerator_code,
         "new_status": aerator.status,
         "mode": aerator.mode,
+        "pond_do": current_do,
         "message": trigger_msg
     }

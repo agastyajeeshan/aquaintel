@@ -25,6 +25,9 @@ def get_feeding_status(db: Session = Depends(get_db)):
         pond_data = iot_simulator.generate_current_pond_readings(f.pond_id)
         current_do = pond_data["metrics"]["do"]["value"]
         current_temp = pond_data["metrics"]["temperature"]["value"]
+        current_ammonia = pond_data["metrics"]["ammonia"]["value"]
+        is_stale = pond_data.get("is_stale", False)
+        sensor_health = pond_data.get("sensor_health", "ONLINE")
         
         # Check if smart recommendation reduces this feeder
         pond_obj = db.query(Pond).filter(Pond.id == f.pond_id).first()
@@ -35,15 +38,26 @@ def get_feeding_status(db: Session = Depends(get_db)):
             biomass_kg=biomass,
             doc=doc,
             temp_c=current_temp,
-            do_mg_l=current_do
+            do_mg_l=current_do,
+            ammonia_mg_l=current_ammonia
         )
+
+        block_reason = None
+        if sensor_health == "OFFLINE" or is_stale:
+            block_reason = "Required pond DO/temperature sensor is offline or stale."
+        elif current_do < 4.0:
+            block_reason = f"Safety lockout: Pond DO ({current_do:.2f} mg/L) is below 4.00 mg/L minimum."
+        elif current_ammonia > 0.10:
+            block_reason = f"Ammonia lockout: Pond TAN ({current_ammonia:.3f} mg/L) exceeds 0.100 mg/L."
+        elif f.daily_quota_kg and (f.dispensed_today_kg or 0.0) >= f.daily_quota_kg:
+            block_reason = "Daily feeding quota already reached."
 
         feeders_list.append({
             "id": f.id,
             "pond_id": f.pond_id,
             "feeder_code": f.feeder_code,
             "name": f.name,
-            "status": "STOPPED" if rec["status"] == "CRITICAL_STOP" else f.status,
+            "status": "STOPPED" if (rec["status"] == "CRITICAL_STOP" or block_reason) else f.status,
             "hopper_capacity_kg": f.hopper_capacity_kg,
             "current_feed_level_kg": f.current_feed_level_kg,
             "feed_type": f.feed_type,
@@ -53,7 +67,14 @@ def get_feeding_status(db: Session = Depends(get_db)):
             "recommended_today_kg": rec["recommended_feed_kg"],
             "reduction_reason": rec["reasons"][0] if rec["reasons"] else None,
             "reduction_percentage": rec["reduction_percentage"],
-            "next_feeding_time": f.next_feeding_time
+            "next_feeding_time": f.next_feeding_time,
+            "pond_do": current_do,
+            "pond_temp": current_temp,
+            "pond_ammonia": current_ammonia,
+            "is_stale": is_stale,
+            "sensor_health": sensor_health,
+            "is_blocked": block_reason is not None,
+            "block_reason": block_reason
         })
 
     logs_list = [{
@@ -116,27 +137,60 @@ def control_feeder(
     if not feeder:
         raise HTTPException(status_code=404, detail="Feeder not found")
 
-    if cmd.action == "START":
-        feeder.status = "FEEDING"
-        feeder.dispensed_today_kg = round((feeder.dispensed_today_kg or 0.0) + (cmd.amount_kg or 2.5), 1)
-        # Log event
+    action_name = cmd.action.upper()
+    pond_data = iot_simulator.generate_current_pond_readings(feeder.pond_id)
+    current_do = pond_data["metrics"]["do"]["value"]
+    current_temp = pond_data["metrics"]["temperature"]["value"]
+    current_ammonia = pond_data["metrics"]["ammonia"]["value"]
+    is_stale = pond_data.get("is_stale", False)
+    sensor_offline = pond_data.get("sensor_health") == "OFFLINE"
+
+    if action_name in ["START", "DISPENSE"]:
+        amount_to_dispense = cmd.amount_kg or 2.5
+        if sensor_offline or is_stale:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Feeding blocked: Required pond sensor telemetry is offline or stale."
+            )
+        if current_do < 4.0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Feeding safety lockout: Pond DO ({current_do:.2f} mg/L) is below minimum safe threshold (4.00 mg/L)."
+            )
+        if current_ammonia > 0.10:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Feeding safety lockout: Pond TAN ({current_ammonia:.3f} mg/L) exceeds 0.100 mg/L safety threshold."
+            )
+        if feeder.daily_quota_kg and ((feeder.dispensed_today_kg or 0.0) + amount_to_dispense) > feeder.daily_quota_kg:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Feeding blocked: Dispensing {amount_to_dispense:.1f} kg exceeds remaining daily quota ({feeder.daily_quota_kg:.1f} kg)."
+            )
+
+        feeder.status = "FEEDING" if action_name == "START" else "STANDBY"
+        feeder.dispensed_today_kg = round((feeder.dispensed_today_kg or 0.0) + amount_to_dispense, 1)
+        if feeder.current_feed_level_kg is not None:
+            feeder.current_feed_level_kg = max(0.0, round(feeder.current_feed_level_kg - amount_to_dispense, 1))
         log = FeedingLog(
             pond_id=feeder.pond_id,
             feeder_id=feeder.id,
-            amount_kg=cmd.amount_kg or 2.5,
-            planned_amount_kg=cmd.amount_kg or 2.5,
-            reduction_reason=f"Manual actuator trigger initiated by {current_user.full_name or current_user.username}.",
-            do_at_feeding=6.2,
-            temp_at_feeding=29.0,
+            amount_kg=amount_to_dispense,
+            planned_amount_kg=amount_to_dispense,
+            reduction_reason=f"Manual actuator trigger ({action_name}) initiated by {current_user.full_name or current_user.username}.",
+            do_at_feeding=current_do,
+            temp_at_feeding=current_temp,
             status="COMPLETED",
             timestamp=datetime.utcnow()
         )
         db.add(log)
-    elif cmd.action == "STOP":
+    elif action_name == "STOP":
         feeder.status = "STANDBY"
-    elif cmd.action == "SCHEDULE":
+    elif action_name == "SCHEDULE":
         if cmd.schedule_time:
             feeder.next_feeding_time = cmd.schedule_time
+    else:
+        raise HTTPException(status_code=400, detail=f"Unsupported feeder action '{cmd.action}'")
 
     db.add(AuditLog(
         user_id=current_user.id,
@@ -144,14 +198,16 @@ def control_feeder(
         action="FEEDER_COMMAND",
         resource_type="FEEDER",
         resource_id=str(feeder.id),
-        details={"action": cmd.action, "pond_id": feeder.pond_id, "amount_kg": cmd.amount_kg}
+        details={"action": action_name, "pond_id": feeder.pond_id, "amount_kg": cmd.amount_kg, "pond_do": current_do}
     ))
     db.commit()
     db.refresh(feeder)
     return {
         "status": "SUCCESS",
+        "command_status": "EXECUTED",
+        "verified_state": feeder.status,
         "feeder_id": feeder.id,
         "new_status": feeder.status,
         "dispensed_today_kg": feeder.dispensed_today_kg,
-        "message": f"Actuator command '{cmd.action}' executed successfully on {feeder.feeder_code}"
+        "message": f"Actuator command '{action_name}' executed successfully on {feeder.feeder_code}"
     }
