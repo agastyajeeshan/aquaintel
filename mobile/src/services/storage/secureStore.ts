@@ -17,14 +17,24 @@ async function setItem(key: string, value: string): Promise<void> {
     webStorage.set(key, value);
     return;
   }
-  await SecureStore.setItemAsync(key, value);
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch (err) {
+    console.warn(`[SecureStore] Failed to write key ${key}:`, err);
+    throw err;
+  }
 }
 
 async function getItem(key: string): Promise<string | null> {
   if (Platform.OS === 'web') {
     return webStorage.get(key) || null;
   }
-  return await SecureStore.getItemAsync(key);
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch (err) {
+    console.warn(`[SecureStore] Failed to read key ${key}:`, err);
+    return null;
+  }
 }
 
 async function deleteItem(key: string): Promise<void> {
@@ -32,7 +42,11 @@ async function deleteItem(key: string): Promise<void> {
     webStorage.delete(key);
     return;
   }
-  await SecureStore.deleteItemAsync(key);
+  try {
+    await SecureStore.deleteItemAsync(key);
+  } catch (err) {
+    console.warn(`[SecureStore] Failed to delete key ${key}:`, err);
+  }
 }
 
 export const secureStorage = {

@@ -1,20 +1,28 @@
-import * as SQLite from 'expo-sqlite';
 import { Platform } from 'react-native';
 import { FarmOverview, PondSummary, AlertItem } from '../../types';
 
 let dbInstance: any = null;
+let sqliteLoadFailed = false;
 
-// Initialize database schema
+// Lazy-load expo-sqlite inside getDatabase so importing this module on Web or in runtimes
+// without the native ExpoSQLite binary does not crash before the root component mounts.
 export async function getDatabase(): Promise<any> {
-  if (Platform.OS === 'web') {
-    return null; // Local storage in-memory for web
+  if (Platform.OS === 'web' || sqliteLoadFailed) {
+    return null;
   }
   if (!dbInstance) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const SQLite = require('expo-sqlite');
+      if (!SQLite?.openDatabaseAsync) {
+        sqliteLoadFailed = true;
+        return null;
+      }
       dbInstance = await SQLite.openDatabaseAsync('aquaintel_mobile.db');
       await initTables(dbInstance);
     } catch (e) {
-      console.warn('SQLite openDatabaseAsync error:', e);
+      sqliteLoadFailed = true;
+      console.warn('ExpoSQLite unavailable; offline SQLite cache disabled:', e);
       return null;
     }
   }

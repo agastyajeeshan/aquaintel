@@ -108,7 +108,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       });
     } catch (e) {
-      await secureStorage.clearAllSession();
+      try {
+        await secureStorage.clearAllSession();
+      } catch {
+        // Ignore SecureStore cleanup failure during recovery
+      }
+      try {
+        await offlineDatabase.clearAllCache();
+      } catch {
+        // Ignore SQLite cache cleanup failure during recovery
+      }
       set({
         token: null,
         user: null,

@@ -1,24 +1,26 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useRootNavigationState } from 'expo-router';
 import { useAuthStore } from '../src/store/authStore';
 import { theme } from '../src/theme';
 import { Waves } from 'lucide-react-native';
 
 export default function IndexScreen() {
   const router = useRouter();
+  const rootNavigationState = useRootNavigationState();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const isLoading = useAuthStore((s) => s.isLoading);
 
   useEffect(() => {
-    if (!isLoading) {
-      if (isAuthenticated) {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/(auth)/login');
-      }
+    if (!rootNavigationState?.key || isLoading) {
+      return;
     }
-  }, [isLoading, isAuthenticated]);
+    if (isAuthenticated) {
+      router.replace('/(tabs)');
+    } else {
+      router.replace('/(auth)/login');
+    }
+  }, [rootNavigationState?.key, isLoading, isAuthenticated, router]);
 
   return (
     <View style={styles.container}>
