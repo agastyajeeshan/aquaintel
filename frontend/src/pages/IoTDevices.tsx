@@ -52,12 +52,19 @@ export const IoTDevices: React.FC = () => {
   };
 
   const summary = deviceData?.summary || {
-    total_devices: 30,
-    online_devices: 28,
-    offline_devices: 2,
+    total_registered_devices: 0,
+    total_devices: 0,
+    provisioned_devices: 0,
+    unprovisioned_devices: 0,
+    online_devices: 0,
+    stale_devices: 0,
+    offline_devices: 0,
+    fault_devices: 0,
+    unknown_devices: 0,
+    fresh_telemetry_count: 0,
     gateway_status: "ONLINE",
     lora_channel: "865.2 MHz (IN865 Band)",
-    average_rssi_dbm: -64,
+    average_rssi_dbm: 0,
   };
 
   const devices = deviceData?.devices || [];
@@ -76,7 +83,7 @@ export const IoTDevices: React.FC = () => {
             </h1>
           </div>
           <p className="text-sm text-[#68776F] mt-1">
-            30 Edge Nodes • 865 MHz IN865 ISM Sub-GHz Band • IP67 Industrial Microcontrollers
+            {summary.total_registered_devices ?? summary.total_devices} Registered Nodes ({summary.provisioned_devices ?? summary.total_devices} Provisioned) • 865 MHz IN865 ISM Sub-GHz Band • IP67 Industrial Microcontrollers
           </p>
         </div>
 
@@ -162,9 +169,11 @@ export const IoTDevices: React.FC = () => {
             Provisioned Nodes
           </span>
           <p className="text-2xl font-bold text-[#172820] tabular-nums mt-1">
-            {summary.total_devices}
+            {summary.provisioned_devices ?? summary.total_devices}
           </p>
-          <span className="text-[10px] text-[#68776F]">ESP32 & RTU Controllers</span>
+          <span className="text-[10px] text-[#68776F]">
+            {summary.total_registered_devices ?? summary.total_devices} Registered ({summary.unprovisioned_devices ?? 0} Unprovisioned)
+          </span>
         </div>
 
         <div className="soft-card p-4 bg-[#E3F3E9]/30 border-[#247653]/30">
@@ -172,9 +181,13 @@ export const IoTDevices: React.FC = () => {
             Network Health
           </span>
           <p className="text-2xl font-bold text-[#21845A] tabular-nums mt-1">
-            {summary.online_devices} / {summary.total_devices}
+            {summary.online_devices} / {summary.total_registered_devices ?? summary.total_devices}
           </p>
-          <span className="text-[10px] text-[#21845A] font-semibold">93.3% Online Health Index</span>
+          <span className="text-[10px] text-[#21845A] font-semibold">
+            {(summary.total_registered_devices ?? summary.total_devices) > 0
+              ? Math.round((summary.online_devices / (summary.total_registered_devices ?? summary.total_devices)) * 100)
+              : 0}% Online ({summary.stale_devices ?? 0} Stale, {summary.offline_devices ?? 0} Offline)
+          </span>
         </div>
 
         <div className="soft-card p-4">
@@ -228,7 +241,6 @@ export const IoTDevices: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-[#E3EAE5] text-[#172820]">
               {devices.map((d: any) => {
-                const isOnline = d.status === "ONLINE";
                 return (
                   <tr key={d.id} className="hover:bg-[#F6F8F6] transition-colors">
                     <td className="py-3 px-4 font-mono font-bold text-[#172820]">
@@ -243,12 +255,16 @@ export const IoTDevices: React.FC = () => {
                     <td className="py-3 px-4">
                       <span
                         className={`text-[10px] font-bold ${
-                          isOnline
+                          (d.connectivity_status || d.status) === "ONLINE"
                             ? "badge-soft-success"
+                            : (d.connectivity_status || d.status) === "STALE"
+                            ? "badge-soft-warning"
+                            : (d.connectivity_status || d.status) === "FAULT"
+                            ? "badge-soft-danger"
                             : "badge-soft-danger"
                         }`}
                       >
-                        {d.status}
+                        {d.connectivity_status || d.status}
                       </span>
                     </td>
                     <td className="py-3 px-4 font-bold tabular-nums">
@@ -262,12 +278,30 @@ export const IoTDevices: React.FC = () => {
                       {d.firmware_version}
                     </td>
                     <td className="py-3 px-4 tabular-nums">
-                      <span className={d.last_seen_seconds_ago > 60 ? "text-[#C84040] font-bold" : "text-[#68776F]"}>
-                        {d.last_seen_seconds_ago}s ago
-                      </span>
-                      {d.last_seen_seconds_ago > 60 && (
-                        <span className="block text-[9px] text-[#C84040] font-bold uppercase">Stale Telemetry</span>
-                      )}
+                      <div className="flex flex-col">
+                        <span className={d.last_seen_seconds_ago > 300 ? "text-[#C84040] font-bold" : d.last_seen_seconds_ago > 60 ? "text-[#B7791F] font-semibold" : "text-[#21845A] font-medium"}>
+                          {d.last_seen_seconds_ago < 60
+                            ? `${d.last_seen_seconds_ago}s ago`
+                            : d.last_seen_seconds_ago < 3600
+                            ? `${Math.round(d.last_seen_seconds_ago / 60)}m ago`
+                            : d.last_seen_seconds_ago < 86400
+                            ? `${Math.round(d.last_seen_seconds_ago / 3600)}h ago`
+                            : `${Math.round(d.last_seen_seconds_ago / 86400)}d ago`}
+                        </span>
+                        {d.telemetry_freshness && (
+                          <span
+                            className={`text-[9px] font-bold uppercase tracking-wider ${
+                              d.telemetry_freshness === "FRESH"
+                                ? "text-[#21845A]"
+                                : d.telemetry_freshness === "STALE"
+                                ? "text-[#B7791F]"
+                                : "text-[#C84040]"
+                            }`}
+                          >
+                            {d.telemetry_freshness} Telemetry
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

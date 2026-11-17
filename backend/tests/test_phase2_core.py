@@ -241,9 +241,39 @@ def test_pond_crud_and_archival():
     finally:
         if pond_id:
             cleanup_db = SessionLocal()
-            cleanup_db.query(Pond).filter(Pond.id == pond_id).delete()
-            cleanup_db.commit()
+            pond_obj = cleanup_db.get(Pond, pond_id)
+            if pond_obj:
+                cleanup_db.delete(pond_obj)
+                cleanup_db.commit()
             cleanup_db.close()
+
+def test_feeding_status_unique_active_feeders():
+    """Verify /feeding/status returns unique feeder codes, distinct values, and pond associations for active ponds only."""
+    res = client.get("/api/v1/feeding/status")
+    assert res.status_code == 200
+    data = res.json()
+    feeders = data["feeders"]
+    assert len(feeders) >= 10
+    codes = [f["feeder_code"] for f in feeders]
+    names = [f["name"] for f in feeders]
+    ids = [f["id"] for f in feeders]
+    assert len(codes) == len(set(codes)), "Duplicate feeder_code entries returned"
+    assert len(names) == len(set(names)), "Repeated feeder names returned"
+    assert len(ids) == len(set(ids)), "Duplicate feeder ids returned"
+    
+    # Verify values are distinct across ponds, not identical static duplicates
+    levels = [f["current_feed_level_kg"] for f in feeders if f.get("current_feed_level_kg") is not None]
+    quotas = [f["daily_quota_kg"] for f in feeders if f.get("daily_quota_kg") is not None]
+    assert len(set(levels)) > 1, "Feeder hopper feed levels must not be identical across all units"
+    assert len(set(quotas)) > 1, "Feeder daily quotas must reflect individual pond biomass"
+
+    # Verify pond linkage
+    for f in feeders:
+        assert f.get("pond_number") is not None, f"Feeder {f['feeder_code']} missing pond_number"
+        assert f.get("pond_name") is not None, f"Feeder {f['feeder_code']} missing pond_name"
+
+    expected_today = round(sum(f["dispensed_today_kg"] or 0 for f in feeders), 1)
+    assert data["summary"]["today_feed_kg"] == expected_today
 
 def test_settings_reset_demo_data():
     """Verify demo reset restores natural diurnal state without destroying user data."""

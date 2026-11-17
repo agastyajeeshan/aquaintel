@@ -4,10 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..models import Sensor, SensorReading, IngestedTelemetry, Pond, Alert
+from ..models import Sensor, SensorReading, IngestedTelemetry, Pond, Alert, IoTDevice
 from .alerts import create_or_deduplicate_alert
 from ..schemas import TelemetryIngestRequest
 from ..config import settings
+from ..core.device_status import parse_and_normalize_timestamp
 
 router = APIRouter(prefix="/telemetry", tags=["Telemetry"])
 
@@ -43,9 +44,24 @@ def ingest_telemetry(payload: TelemetryIngestRequest, db: Session = Depends(get_
     if not pond:
         raise HTTPException(status_code=404, detail=f"Target pond ID {pond_id} not found")
 
-    reading_timestamp = payload.timestamp or datetime.now(timezone.utc)
-    records_created = 0
     anomalies = []
+    norm_ts, ts_status = parse_and_normalize_timestamp(payload.timestamp)
+    if ts_status == "FUTURE_TIMESTAMP":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Telemetry rejected: Timestamp is more than 15 seconds in the future (clock skew)."
+        )
+    elif ts_status == "INVALID_FORMAT":
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Telemetry rejected: Malformed or unparseable timestamp format."
+        )
+    elif norm_ts:
+        reading_timestamp = norm_ts
+    else:
+        reading_timestamp = datetime.now(timezone.utc)
+
+    records_created = 0
     sensor_map = {
         "do": payload.readings.do_mg_l,
         "ph": payload.readings.ph,
@@ -117,7 +133,23 @@ def ingest_telemetry(payload: TelemetryIngestRequest, db: Session = Depends(get_
                 recommended_action="Emergency aeration boost triggered. Halt automated feeding."
             )
 
-    # 4. Record ingested telemetry message for provenance
+    # 4. Update associated IoTDevice communication metadata
+    if payload.device_id:
+        target_dev = db.query(IoTDevice).filter(IoTDevice.device_id == payload.device_id).first()
+        if target_dev:
+            if target_dev.pond_id and target_dev.pond_id != pond_id:
+                anomalies.append({
+                    "sensor_type": "device_association",
+                    "value": pond_id,
+                    "reason": f"Device '{payload.device_id}' registered to Pond {target_dev.pond_id}, but payload reported Pond {pond_id}."
+                })
+            else:
+                target_dev.last_telemetry_at = reading_timestamp
+                dev_last_seen = target_dev.last_seen.replace(tzinfo=timezone.utc) if target_dev.last_seen and target_dev.last_seen.tzinfo is None else target_dev.last_seen
+                if dev_last_seen is None or reading_timestamp >= dev_last_seen:
+                    target_dev.last_seen = reading_timestamp
+
+    # 5. Record ingested telemetry message for provenance
     db.add(IngestedTelemetry(
         message_id=payload.message_id,
         device_id=payload.device_id,

@@ -4,14 +4,20 @@ import { Platform } from 'react-native';
 import { alertsApi } from '../api/alerts.api';
 import { secureStorage } from '../storage/secureStore';
 
-// Configure foreground notification behavior
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Configure foreground notification behavior safely on native platforms
+if (Platform.OS !== 'web') {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+      }),
+    });
+  } catch (err) {
+    console.warn('[AquaIntel Notifications] Failed to initialize notification handler:', err);
+  }
+}
 
 /**
  * Configure Android notification channels for AquaIntel operational tiers.
@@ -176,6 +182,7 @@ export const notificationService = {
    * Safe retrieval of cold-start notification response.
    */
   async getLastNotificationResponseAsync(): Promise<Notifications.NotificationResponse | null> {
+    if (Platform.OS === 'web') return null;
     try {
       return await Notifications.getLastNotificationResponseAsync();
     } catch {
@@ -184,12 +191,26 @@ export const notificationService = {
   },
 
   addNotificationReceivedListener(callback: (notification: Notifications.Notification) => void) {
-    return Notifications.addNotificationReceivedListener(callback);
+    if (Platform.OS === 'web') {
+      return { remove: () => {} };
+    }
+    try {
+      return Notifications.addNotificationReceivedListener(callback);
+    } catch {
+      return { remove: () => {} };
+    }
   },
 
   addNotificationResponseReceivedListener(
     callback: (response: Notifications.NotificationResponse) => void
   ) {
-    return Notifications.addNotificationResponseReceivedListener(callback);
+    if (Platform.OS === 'web') {
+      return { remove: () => {} };
+    }
+    try {
+      return Notifications.addNotificationResponseReceivedListener(callback);
+    } catch {
+      return { remove: () => {} };
+    }
   },
 };

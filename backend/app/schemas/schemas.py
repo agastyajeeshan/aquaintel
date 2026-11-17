@@ -83,7 +83,7 @@ class TelemetryIngestRequest(BaseModel):
     device_id: str
     farm_id: Optional[str] = "farm-01"
     pond_id: Optional[int] = 1
-    timestamp: Optional[datetime] = None
+    timestamp: Optional[Any] = Field(None, description="Unix sec/ms, ISO timestamp, or datetime")
     mode: Optional[str] = "SIMULATED"  # "SIMULATED", "LIVE", "TEST"
     readings: TelemetryReadings
     sensor_status: Optional[SensorStatusMap] = None
