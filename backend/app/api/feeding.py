@@ -13,27 +13,39 @@ router = APIRouter(prefix="/feeding", tags=["Feeding"])
 
 @router.get("/status")
 def get_feeding_status(db: Session = Depends(get_db)):
-    feeders = db.query(Feeder).order_by(Feeder.pond_id).all()
-    logs = db.query(FeedingLog).order_by(FeedingLog.timestamp.desc()).limit(15).all()
-    
-    total_quota = sum(f.daily_quota_kg or 0 for f in feeders)
-    total_dispensed = sum(f.dispensed_today_kg or 0 for f in feeders)
-    total_remaining = max(0.0, total_quota - total_dispensed)
-    
+    rows = (
+        db.query(Feeder, Pond)
+        .join(Pond, Feeder.pond_id == Pond.id)
+        .filter(
+            (Pond.is_archived == False) | (Pond.is_archived == None),
+            (Feeder.is_active == True) | (Feeder.is_active == None),
+        )
+        .order_by(Pond.pond_number.asc(), Feeder.id.asc())
+        .all()
+    )
+
     feeders_list = []
-    for f in feeders:
+    seen_codes = set()
+    total_quota = 0.0
+    total_dispensed = 0.0
+    total_recommended = 0.0
+
+    for f, pond_obj in rows:
+        code_key = (f.feeder_code or f"FEEDER-{f.id}").strip().upper()
+        if code_key in seen_codes:
+            continue
+        seen_codes.add(code_key)
+
         pond_data = iot_simulator.generate_current_pond_readings(f.pond_id)
         current_do = pond_data["metrics"]["do"]["value"]
         current_temp = pond_data["metrics"]["temperature"]["value"]
         current_ammonia = pond_data["metrics"]["ammonia"]["value"]
         is_stale = pond_data.get("is_stale", False)
         sensor_health = pond_data.get("sensor_health", "ONLINE")
-        
-        # Check if smart recommendation reduces this feeder
-        pond_obj = db.query(Pond).filter(Pond.id == f.pond_id).first()
+
         biomass = pond_obj.estimated_biomass_kg if pond_obj else 1250.0
         doc = pond_obj.current_age_days if pond_obj else 45
-        
+
         rec = feeding_engine.calculate_feeding_recommendation(
             biomass_kg=biomass,
             doc=doc,
@@ -52,9 +64,19 @@ def get_feeding_status(db: Session = Depends(get_db)):
         elif f.daily_quota_kg and (f.dispensed_today_kg or 0.0) >= f.daily_quota_kg:
             block_reason = "Daily feeding quota already reached."
 
+        quota_val = float(f.daily_quota_kg or 0.0)
+        dispensed_val = float(f.dispensed_today_kg or 0.0)
+        rec_val = float(rec["recommended_feed_kg"] or 0.0)
+
+        total_quota += quota_val
+        total_dispensed += dispensed_val
+        total_recommended += rec_val
+
         feeders_list.append({
             "id": f.id,
             "pond_id": f.pond_id,
+            "pond_number": pond_obj.pond_number,
+            "pond_name": pond_obj.name,
             "feeder_code": f.feeder_code,
             "name": f.name,
             "status": "STOPPED" if (rec["status"] == "CRITICAL_STOP" or block_reason) else f.status,
@@ -77,6 +99,18 @@ def get_feeding_status(db: Session = Depends(get_db)):
             "block_reason": block_reason
         })
 
+    total_remaining = max(0.0, total_quota - total_dispensed)
+
+    logs = (
+        db.query(FeedingLog)
+        .join(Feeder, FeedingLog.feeder_id == Feeder.id)
+        .join(Pond, FeedingLog.pond_id == Pond.id)
+        .filter((Pond.is_archived == False) | (Pond.is_archived == None))
+        .order_by(FeedingLog.timestamp.desc())
+        .limit(15)
+        .all()
+    )
+
     logs_list = [{
         "id": l.id,
         "pond_id": l.pond_id,
@@ -94,7 +128,7 @@ def get_feeding_status(db: Session = Depends(get_db)):
     return {
         "summary": {
             "today_feed_kg": round(total_dispensed, 1),
-            "recommended_feed_kg": round(total_quota * 0.94, 1),
+            "recommended_feed_kg": round(total_recommended, 1),
             "feed_consumed_kg": round(total_dispensed * 0.96, 1),
             "feed_remaining_kg": round(total_remaining, 1),
             "fcr": 1.24,

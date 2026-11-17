@@ -108,7 +108,7 @@ class Feeder(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     pond_id = Column(Integer, ForeignKey("ponds.id"), nullable=False)
-    feeder_code = Column(String(50), nullable=False)  # e.g. "FEEDER-P01"
+    feeder_code = Column(String(50), unique=True, nullable=False)  # e.g. "FEEDER-P01"
     name = Column(String(100), default="Automated Solar Feeder 01")
     status = Column(String(30), default="STANDBY")  # ONLINE, FEEDING, STANDBY, ERROR, MAINTENANCE
     hopper_capacity_kg = Column(Float, default=120.0)
@@ -227,6 +227,10 @@ class IoTDevice(Base):
     ip_address = Column(String(50), default="192.168.1.101")
     uptime_hours = Column(Float, default=248.5)
     last_seen = Column(DateTime, default=datetime.utcnow)
+    last_heartbeat_at = Column(DateTime, nullable=True)
+    last_telemetry_at = Column(DateTime, nullable=True)
+    hardware_health = Column(String(30), default="HEALTHY")
+    is_provisioned = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class CameraObservation(Base):

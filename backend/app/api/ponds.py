@@ -365,14 +365,24 @@ def create_pond(
             status="ONLINE"
         ))
 
-    # Add default aerator and feeder
-    db.add(Feeder(
-        pond_id=new_pond.id,
-        feeder_code=f"FEEDER-P{new_pond.pond_number:02d}",
-        name=f"Smart Solar Feeder {new_pond.pond_number:02d}",
-        hopper_capacity_kg=120.0,
-        current_feed_level_kg=90.0
-    ))
+    # Add default aerator and feeder (skip if feeder_code already provisioned)
+    feeder_code = f"FEEDER-P{new_pond.pond_number:02d}"
+    if not db.query(Feeder).filter(Feeder.feeder_code == feeder_code).first():
+        biomass = float(new_pond.estimated_biomass_kg or 1250.0)
+        quota_calc = round(biomass * 0.035, 1)
+        db.add(Feeder(
+            pond_id=new_pond.id,
+            feeder_code=feeder_code,
+            name=f"Solar Smart Feeder P{new_pond.pond_number:02d}",
+            hopper_capacity_kg=120.0,
+            current_feed_level_kg=max(40.0, round(95.0 - (new_pond.pond_number * 2.5), 1)),
+            feed_type="High-Pro Grower 38% Pellet (1.8mm)",
+            feeding_mode="SMART_AUTO",
+            daily_quota_kg=quota_calc,
+            dispensed_today_kg=round(quota_calc * 0.45, 1),
+            next_feeding_time="17:00 IST",
+            is_active=True
+        ))
     db.add(Aerator(
         pond_id=new_pond.id,
         aerator_code=f"AER-P{new_pond.pond_number:02d}-A",
