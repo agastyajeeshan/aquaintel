@@ -159,6 +159,17 @@ class AutonomousDecisionEngine:
         is_sensor_valid, validation_errors = self.validate_sensor_telemetry(telemetry)
         if not is_sensor_valid:
             # Block automated actuations on bad sensor data; hold fail-safe aeration and notify
+            recent_stale_ev = db.query(AutonomousDecisionEvent).filter(
+                AutonomousDecisionEvent.pond_id == pond_id,
+                AutonomousDecisionEvent.condition_type == "SENSOR_ANOMALY_STALE",
+                AutonomousDecisionEvent.created_at >= now_dt - timedelta(minutes=5)
+            ).order_by(AutonomousDecisionEvent.created_at.desc()).first()
+
+            if recent_stale_ev:
+                recent_stale_ev.multi_parameter_analysis = {"validation_errors": validation_errors}
+                db.commit()
+                return [recent_stale_ev]
+
             event_id = f"EVT-STALE-{uuid.uuid4().hex[:8].upper()}"
             rationale = "Sensor reading rejection: " + "; ".join(validation_errors)
             
@@ -204,16 +215,6 @@ class AutonomousDecisionEngine:
         # CONDITION A: CRITICAL LOW DISSOLVED OXYGEN (Hypoxia Emergency)
         # =========================================================================
         if do_val < config.emergency_do_threshold:
-            event_id = f"EVT-HYPOXIA-{uuid.uuid4().hex[:8].upper()}"
-            severity = "EMERGENCY" if do_val < 3.0 else "CRITICAL"
-            rationale = (
-                f"DO dropped to {do_val} mg/L (Critical safety threshold: {config.emergency_do_threshold} mg/L). "
-                f"Immediate hypoxic mortality risk for L. vannamei. "
-                f"Automatic 100% aeration cascade required. Motorized feeding must be halted."
-            )
-            
-            action_mode = "AUTOMATIC" if config.operating_mode in ["AUTOMATIC_SAFETY", "FULL_AUTOMATION"] else "ADVISORY_ONLY"
-            is_exec = False
             # Identify primary and backup aerators for this pond
             aerators = db.query(Aerator).filter(Aerator.pond_id == pond_id).all()
             primary_aerators = [a for a in aerators if not a.aerator_code.endswith("-D")]
@@ -222,104 +223,132 @@ class AutonomousDecisionEngine:
                 backup_aerator = aerators[-1]
                 primary_aerators = [a for a in aerators if a.id != backup_aerator.id]
 
-            if action_mode == "AUTOMATIC" and config.auto_aeration_enabled:
-                # 1. Turn on all primary aerators
-                for aer in primary_aerators:
-                    success, msg, act_rec = hal.dispatch_command(
-                        db=db,
-                        pond_id=pond_id,
-                        equipment_type="AERATOR",
-                        equipment_code=aer.aerator_code,
-                        action="START",
-                        params={"reason": "Autonomous Critical Low DO Emergency Cascade", "trigger_do": do_val},
-                        min_on_seconds=config.min_on_seconds,
-                        min_off_seconds=config.min_off_seconds,
-                        decision_event_id=event_id
-                    )
-                    
-                    # 2. Aerator Backup Failover Check: If a primary aerator tripped/failed, failover to backup!
-                    if not success and act_rec and act_rec.equipment_ack_status == "MOTOR_FAULT_TRIPPED" and backup_aerator:
-                        # Failover to backup
-                        b_success, b_msg, b_act = hal.dispatch_command(
+            # Check if an active decision event already exists from recent evaluation cycle
+            recent_hypoxia_ev = db.query(AutonomousDecisionEvent).filter(
+                AutonomousDecisionEvent.pond_id == pond_id,
+                AutonomousDecisionEvent.condition_type == "LOW_DO_HYPOXIA",
+                AutonomousDecisionEvent.created_at >= now_dt - timedelta(minutes=5)
+            ).order_by(AutonomousDecisionEvent.created_at.desc()).first()
+
+            has_fault = any(hal._fault_injections.get(a.aerator_code) for a in primary_aerators)
+            aerators_running = all(a.status == "RUNNING" for a in primary_aerators)
+            feeders = db.query(Feeder).filter(Feeder.pond_id == pond_id).all()
+            feeders_standby = all(f.status == "STANDBY" for f in feeders)
+
+            if recent_hypoxia_ev and aerators_running and feeders_standby and not has_fault:
+                # Retain and update existing decision event without duplicate command/notification dispatch
+                recent_hypoxia_ev.trigger_parameters = {"do_mg_l": do_val, "threshold": config.emergency_do_threshold}
+                db.commit()
+                generated_events.append(recent_hypoxia_ev)
+            else:
+                event_id = f"EVT-HYPOXIA-{uuid.uuid4().hex[:8].upper()}"
+                severity = "EMERGENCY" if do_val < 3.0 else "CRITICAL"
+                rationale = (
+                    f"DO dropped to {do_val} mg/L (Critical safety threshold: {config.emergency_do_threshold} mg/L). "
+                    f"Immediate hypoxic mortality risk for L. vannamei. "
+                    f"Automatic 100% aeration cascade required. Motorized feeding must be halted."
+                )
+                
+                action_mode = "AUTOMATIC" if config.operating_mode in ["AUTOMATIC_SAFETY", "FULL_AUTOMATION"] else "ADVISORY_ONLY"
+                is_exec = False
+
+                if action_mode == "AUTOMATIC" and config.auto_aeration_enabled:
+                    # 1. Turn on all primary aerators
+                    for aer in primary_aerators:
+                        success, msg, act_rec = hal.dispatch_command(
                             db=db,
                             pond_id=pond_id,
-                            equipment_type="BACKUP_AERATOR",
-                            equipment_code=backup_aerator.aerator_code,
-                            action="FAILOVER_BACKUP",
-                            params={"reason": f"Primary {aer.aerator_code} tripped: {msg}. Failover to backup.", "trigger_do": do_val},
+                            equipment_type="AERATOR",
+                            equipment_code=aer.aerator_code,
+                            action="START",
+                            params={"reason": "Autonomous Critical Low DO Emergency Cascade", "trigger_do": do_val},
                             min_on_seconds=config.min_on_seconds,
                             min_off_seconds=config.min_off_seconds,
                             decision_event_id=event_id
                         )
-                        notification_service.send_notification(
-                            db=db,
-                            pond_id=pond_id,
-                            condition_detected="AERATOR_TRIP_FAILOVER",
-                            severity="EMERGENCY",
-                            title=f"EMERGENCY AERATOR FAILOVER — Pond 0{pond_id}",
-                            message=f"Primary aerator {aer.aerator_code} tripped. Backup aerator {backup_aerator.aerator_code} automatically engaged.",
-                            actual_reading=do_val,
-                            unit="mg/L",
-                            configured_threshold=config.emergency_do_threshold,
-                            automatic_action_taken=f"FAILOVER_BACKUP: {backup_aerator.aerator_code}",
-                            action_status="FAILOVER_ACTIVE",
-                            recommended_next_steps="Dispatch maintenance technician to inspect tripped contactor.",
-                            event_id=event_id,
-                            force_escalate=True
-                        )
+                        
+                        # 2. Aerator Backup Failover Check: If a primary aerator tripped/failed, failover to backup!
+                        if not success and act_rec and act_rec.equipment_ack_status == "MOTOR_FAULT_TRIPPED" and backup_aerator:
+                            # Failover to backup
+                            b_success, b_msg, b_act = hal.dispatch_command(
+                                db=db,
+                                pond_id=pond_id,
+                                equipment_type="BACKUP_AERATOR",
+                                equipment_code=backup_aerator.aerator_code,
+                                action="FAILOVER_BACKUP",
+                                params={"reason": f"Primary {aer.aerator_code} tripped: {msg}. Failover to backup.", "trigger_do": do_val},
+                                min_on_seconds=config.min_on_seconds,
+                                min_off_seconds=config.min_off_seconds,
+                                decision_event_id=event_id
+                            )
+                            notification_service.send_notification(
+                                db=db,
+                                pond_id=pond_id,
+                                condition_detected="AERATOR_TRIP_FAILOVER",
+                                severity="EMERGENCY",
+                                title=f"EMERGENCY AERATOR FAILOVER — Pond 0{pond_id}",
+                                message=f"Primary aerator {aer.aerator_code} tripped. Backup aerator {backup_aerator.aerator_code} automatically engaged.",
+                                actual_reading=do_val,
+                                unit="mg/L",
+                                configured_threshold=config.emergency_do_threshold,
+                                automatic_action_taken=f"FAILOVER_BACKUP: {backup_aerator.aerator_code}",
+                                action_status="FAILOVER_ACTIVE",
+                                recommended_next_steps="Dispatch maintenance technician to inspect tripped contactor.",
+                                event_id=event_id,
+                                force_escalate=True
+                            )
 
-                # 3. Interlock: Automatically halt feeding during critical hypoxia
-                if config.auto_feeder_cutoff_enabled:
-                    feeders = db.query(Feeder).filter(Feeder.pond_id == pond_id).all()
-                    for f in feeders:
-                        hal.dispatch_command(
-                            db=db,
-                            pond_id=pond_id,
-                            equipment_type="FEEDER",
-                            equipment_code=f.feeder_code,
-                            action="SUSPEND",
-                            params={"reason": f"Emergency feed suspension: DO {do_val} mg/L < {config.emergency_do_threshold}", "trigger_do": do_val},
-                            decision_event_id=event_id
-                        )
+                    # 3. Interlock: Automatically halt feeding during critical hypoxia
+                    if config.auto_feeder_cutoff_enabled:
+                        for f in feeders:
+                            hal.dispatch_command(
+                                db=db,
+                                pond_id=pond_id,
+                                equipment_type="FEEDER",
+                                equipment_code=f.feeder_code,
+                                action="SUSPEND",
+                                params={"reason": f"Emergency feed suspension: DO {do_val} mg/L < {config.emergency_do_threshold}", "trigger_do": do_val},
+                                decision_event_id=event_id
+                            )
 
-                is_exec = True
+                    is_exec = True
 
-            event = AutonomousDecisionEvent(
-                event_id=event_id,
-                pond_id=pond_id,
-                severity=severity,
-                condition_type="LOW_DO_HYPOXIA",
-                title=f"Critical Hypoxia Alert: DO {do_val} mg/L on Pond 0{pond_id}",
-                trigger_parameters={"do_mg_l": do_val, "threshold": config.emergency_do_threshold},
-                multi_parameter_analysis={"temperature_c": temp_val, "ph": ph_val},
-                weather_context={"rainfall_mm": rainfall_mm},
-                decision_rationale=rationale,
-                selected_action="CASCADE_ALL_AERATORS_AND_HALT_FEEDING",
-                action_mode=action_mode,
-                is_executed=is_exec,
-                status="ACTION_EXECUTED" if is_exec else "DETECTED",
-                created_at=now_dt
-            )
-            db.add(event)
-            db.commit()
+                event = AutonomousDecisionEvent(
+                    event_id=event_id,
+                    pond_id=pond_id,
+                    severity=severity,
+                    condition_type="LOW_DO_HYPOXIA",
+                    title=f"Critical Hypoxia Alert: DO {do_val} mg/L on Pond 0{pond_id}",
+                    trigger_parameters={"do_mg_l": do_val, "threshold": config.emergency_do_threshold},
+                    multi_parameter_analysis={"temperature_c": temp_val, "ph": ph_val},
+                    weather_context={"rainfall_mm": rainfall_mm},
+                    decision_rationale=rationale,
+                    selected_action="CASCADE_ALL_AERATORS_AND_HALT_FEEDING",
+                    action_mode=action_mode,
+                    is_executed=is_exec,
+                    status="ACTION_EXECUTED" if is_exec else "DETECTED",
+                    created_at=now_dt
+                )
+                db.add(event)
+                db.commit()
 
-            notification_service.send_notification(
-                db=db,
-                pond_id=pond_id,
-                condition_detected="LOW_DO_HYPOXIA",
-                severity=severity,
-                title=f"CRITICAL HYPOXIA — Pond 0{pond_id} DO {do_val} mg/L",
-                message=rationale,
-                actual_reading=do_val,
-                unit="mg/L",
-                configured_threshold=config.emergency_do_threshold,
-                automatic_action_taken="CASCADE_ALL_AERATORS_AND_HALT_FEEDING" if is_exec else "ADVISORY_PENDING",
-                action_status="EXECUTED" if is_exec else "MANUAL_AUTH_REQUIRED",
-                recommended_next_steps="Ensure continuous aeration until DO > 5.5 mg/L. Do not dispense feed.",
-                event_id=event_id,
-                force_escalate=True
-            )
-            generated_events.append(event)
+                notification_service.send_notification(
+                    db=db,
+                    pond_id=pond_id,
+                    condition_detected="LOW_DO_HYPOXIA",
+                    severity=severity,
+                    title=f"CRITICAL HYPOXIA — Pond 0{pond_id} DO {do_val} mg/L",
+                    message=rationale,
+                    actual_reading=do_val,
+                    unit="mg/L",
+                    configured_threshold=config.emergency_do_threshold,
+                    automatic_action_taken="CASCADE_ALL_AERATORS_AND_HALT_FEEDING" if is_exec else "ADVISORY_PENDING",
+                    action_status="EXECUTED" if is_exec else "MANUAL_AUTH_REQUIRED",
+                    recommended_next_steps="Ensure continuous aeration until DO > 5.5 mg/L. Do not dispense feed.",
+                    event_id=event_id,
+                    force_escalate=True
+                )
+                generated_events.append(event)
 
         # =========================================================================
         # CONDITION B: UNSAFE FEEDING CONDITIONS (Thermal, Ammonia, or Anorexia)
@@ -336,168 +365,205 @@ class AutonomousDecisionEngine:
 
         if unsafe_feed_reasons and do_val >= config.emergency_do_threshold:
             # (If DO was already emergency, feeding was suspended above)
-            event_id = f"EVT-FEED-CUT-{uuid.uuid4().hex[:8].upper()}"
-            rationale = "Feeding safety interlock triggered: " + "; ".join(unsafe_feed_reasons)
-            action_mode = "AUTOMATIC" if config.operating_mode in ["AUTOMATIC_SAFETY", "FULL_AUTOMATION"] else "ADVISORY_ONLY"
-            is_exec = False
+            recent_feed_ev = db.query(AutonomousDecisionEvent).filter(
+                AutonomousDecisionEvent.pond_id == pond_id,
+                AutonomousDecisionEvent.condition_type == "UNSAFE_FEEDING_INTERLOCK",
+                AutonomousDecisionEvent.created_at >= now_dt - timedelta(minutes=5)
+            ).order_by(AutonomousDecisionEvent.created_at.desc()).first()
 
-            if action_mode == "AUTOMATIC" and config.auto_feeder_cutoff_enabled:
-                feeders = db.query(Feeder).filter(Feeder.pond_id == pond_id).all()
-                for f in feeders:
-                    hal.dispatch_command(
-                        db=db,
-                        pond_id=pond_id,
-                        equipment_type="FEEDER",
-                        equipment_code=f.feeder_code,
-                        action="SUSPEND",
-                        params={"reason": rationale, "trigger_temp": temp_val, "trigger_tan": tan_val},
-                        decision_event_id=event_id
-                    )
-                is_exec = True
+            feeders = db.query(Feeder).filter(Feeder.pond_id == pond_id).all()
+            feeders_suspended = all(f.status == "STANDBY" for f in feeders)
 
-            event = AutonomousDecisionEvent(
-                event_id=event_id,
-                pond_id=pond_id,
-                severity="WARNING",
-                condition_type="UNSAFE_FEEDING_INTERLOCK",
-                title=f"Automatic Feeding Suspension Interlock — Pond 0{pond_id}",
-                trigger_parameters={"temperature_c": temp_val, "tan_mg_l": tan_val, "nh3_mg_l": nh3_val, "tray_resp_pct": tray_resp},
-                multi_parameter_analysis={"emerson_nh3_mg_l": nh3_val},
-                weather_context={"rainfall_mm": rainfall_mm},
-                decision_rationale=rationale,
-                selected_action="SUSPEND_AUTOMATED_FEEDERS",
-                action_mode=action_mode,
-                is_executed=is_exec,
-                status="ACTION_EXECUTED" if is_exec else "DETECTED",
-                created_at=now_dt
-            )
-            db.add(event)
-            db.commit()
+            if recent_feed_ev and feeders_suspended:
+                recent_feed_ev.trigger_parameters = {"temperature_c": temp_val, "tan_mg_l": tan_val, "nh3_mg_l": nh3_val, "tray_resp_pct": tray_resp}
+                db.commit()
+                generated_events.append(recent_feed_ev)
+            else:
+                event_id = f"EVT-FEED-CUT-{uuid.uuid4().hex[:8].upper()}"
+                rationale = "Feeding safety interlock triggered: " + "; ".join(unsafe_feed_reasons)
+                action_mode = "AUTOMATIC" if config.operating_mode in ["AUTOMATIC_SAFETY", "FULL_AUTOMATION"] else "ADVISORY_ONLY"
+                is_exec = False
 
-            notification_service.send_notification(
-                db=db,
-                pond_id=pond_id,
-                condition_detected="UNSAFE_FEEDING_INTERLOCK",
-                severity="WARNING",
-                title=f"Feeding Suspended — Pond 0{pond_id}",
-                message=rationale,
-                actual_reading=temp_val,
-                unit="°C",
-                configured_threshold=config.max_safe_temp_c,
-                automatic_action_taken="SUSPEND_AUTOMATED_FEEDERS" if is_exec else "ADVISORY_PENDING",
-                action_status="EXECUTED" if is_exec else "MANUAL_AUTH_REQUIRED",
-                recommended_next_steps="Inspect check-tray sediment. Resume feed only after parameters stabilize.",
-                event_id=event_id
-            )
-            generated_events.append(event)
+                if action_mode == "AUTOMATIC" and config.auto_feeder_cutoff_enabled:
+                    for f in feeders:
+                        hal.dispatch_command(
+                            db=db,
+                            pond_id=pond_id,
+                            equipment_type="FEEDER",
+                            equipment_code=f.feeder_code,
+                            action="SUSPEND",
+                            params={"reason": rationale, "trigger_temp": temp_val, "trigger_tan": tan_val},
+                            decision_event_id=event_id
+                        )
+                    is_exec = True
+
+                event = AutonomousDecisionEvent(
+                    event_id=event_id,
+                    pond_id=pond_id,
+                    severity="WARNING",
+                    condition_type="UNSAFE_FEEDING_INTERLOCK",
+                    title=f"Automatic Feeding Suspension Interlock — Pond 0{pond_id}",
+                    trigger_parameters={"temperature_c": temp_val, "tan_mg_l": tan_val, "nh3_mg_l": nh3_val, "tray_resp_pct": tray_resp},
+                    multi_parameter_analysis={"emerson_nh3_mg_l": nh3_val},
+                    weather_context={"rainfall_mm": rainfall_mm},
+                    decision_rationale=rationale,
+                    selected_action="SUSPEND_AUTOMATED_FEEDERS",
+                    action_mode=action_mode,
+                    is_executed=is_exec,
+                    status="ACTION_EXECUTED" if is_exec else "DETECTED",
+                    created_at=now_dt
+                )
+                db.add(event)
+                db.commit()
+
+                notification_service.send_notification(
+                    db=db,
+                    pond_id=pond_id,
+                    condition_detected="UNSAFE_FEEDING_INTERLOCK",
+                    severity="WARNING",
+                    title=f"Feeding Suspended — Pond 0{pond_id}",
+                    message=rationale,
+                    actual_reading=temp_val,
+                    unit="°C",
+                    configured_threshold=config.max_safe_temp_c,
+                    automatic_action_taken="SUSPEND_AUTOMATED_FEEDERS" if is_exec else "ADVISORY_PENDING",
+                    action_status="EXECUTED" if is_exec else "MANUAL_AUTH_REQUIRED",
+                    recommended_next_steps="Inspect check-tray sediment. Resume feed only after parameters stabilize.",
+                    event_id=event_id
+                )
+                generated_events.append(event)
 
         # =========================================================================
         # CONDITION C: HEAVY RAINFALL / OSMOTIC DILUTION & FLOOD SAFEGUARD
         # =========================================================================
         if (rainfall_mm > 25.0 or water_level_m > config.flood_water_level_m) and sal_val < 15.0:
-            event_id = f"EVT-FLOOD-{uuid.uuid4().hex[:8].upper()}"
-            rationale = (
-                f"Rainfall {rainfall_mm} mm and pond water level {water_level_m} m with salinity drop to {sal_val} ppt. "
-                f"High risk of surface freshwater stratification, low hardness, and dike overflow. "
-                f"Surface overflow skim valve armed; automatic aeration activated to break thermal/saline stratification."
-            )
-            action_mode = "AUTOMATIC" if config.operating_mode in ["AUTOMATIC_SAFETY", "FULL_AUTOMATION"] else "ADVISORY_ONLY"
-            is_exec = False
+            aerators = db.query(Aerator).filter(Aerator.pond_id == pond_id).limit(2).all()
+            aerators_running = all(a.status == "RUNNING" for a in aerators)
 
-            if action_mode == "AUTOMATIC" and config.auto_flood_safeguard_enabled:
-                # Aerators break surface rainwater lens
-                aerators = db.query(Aerator).filter(Aerator.pond_id == pond_id).limit(2).all()
-                for a in aerators:
-                    hal.dispatch_command(
-                        db=db,
-                        pond_id=pond_id,
-                        equipment_type="AERATOR",
-                        equipment_code=a.aerator_code,
-                        action="START",
-                        params={"reason": "Break surface stratification during heavy rain", "rainfall_mm": rainfall_mm},
-                        decision_event_id=event_id
-                    )
-                is_exec = True
+            recent_flood_ev = db.query(AutonomousDecisionEvent).filter(
+                AutonomousDecisionEvent.pond_id == pond_id,
+                AutonomousDecisionEvent.condition_type == "HEAVY_RAIN_FLOOD",
+                AutonomousDecisionEvent.created_at >= now_dt - timedelta(minutes=5)
+            ).order_by(AutonomousDecisionEvent.created_at.desc()).first()
 
-            event = AutonomousDecisionEvent(
-                event_id=event_id,
-                pond_id=pond_id,
-                severity="WARNING",
-                condition_type="HEAVY_RAIN_FLOOD",
-                title=f"Heavy Rain & Dilution Safeguard — Pond 0{pond_id}",
-                trigger_parameters={"rainfall_mm": rainfall_mm, "water_level_m": water_level_m, "salinity_ppt": sal_val},
-                multi_parameter_analysis={"stratification_risk": "HIGH"},
-                weather_context={"rainfall_mm": rainfall_mm},
-                decision_rationale=rationale,
-                selected_action="STRATIFICATION_DESTRATIFY_AERATION_AND_SURFACE_SKIM",
-                action_mode=action_mode,
-                is_executed=is_exec,
-                status="ACTION_EXECUTED" if is_exec else "DETECTED",
-                created_at=now_dt
-            )
-            db.add(event)
-            db.commit()
+            if recent_flood_ev and aerators_running:
+                recent_flood_ev.trigger_parameters = {"rainfall_mm": rainfall_mm, "water_level_m": water_level_m, "salinity_ppt": sal_val}
+                db.commit()
+                generated_events.append(recent_flood_ev)
+            else:
+                event_id = f"EVT-FLOOD-{uuid.uuid4().hex[:8].upper()}"
+                rationale = (
+                    f"Rainfall {rainfall_mm} mm and pond water level {water_level_m} m with salinity drop to {sal_val} ppt. "
+                    f"High risk of surface freshwater stratification, low hardness, and dike overflow. "
+                    f"Surface overflow skim valve armed; automatic aeration activated to break thermal/saline stratification."
+                )
+                action_mode = "AUTOMATIC" if config.operating_mode in ["AUTOMATIC_SAFETY", "FULL_AUTOMATION"] else "ADVISORY_ONLY"
+                is_exec = False
 
-            notification_service.send_notification(
-                db=db,
-                pond_id=pond_id,
-                condition_detected="HEAVY_RAIN_FLOOD",
-                severity="WARNING",
-                title=f"Heavy Rain Osmotic Shock Safeguard — Pond 0{pond_id}",
-                message=rationale,
-                actual_reading=rainfall_mm,
-                unit="mm",
-                configured_threshold=25.0,
-                automatic_action_taken="STRATIFICATION_AERATION" if is_exec else "ADVISORY_PENDING",
-                action_status="EXECUTED" if is_exec else "MANUAL_AUTH_REQUIRED",
-                recommended_next_steps="Apply agricultural limestone/dolomite (CaMg(CO3)2) to buffer total alkalinity.",
-                event_id=event_id
-            )
-            generated_events.append(event)
+                if action_mode == "AUTOMATIC" and config.auto_flood_safeguard_enabled:
+                    # Aerators break surface rainwater lens
+                    for a in aerators:
+                        hal.dispatch_command(
+                            db=db,
+                            pond_id=pond_id,
+                            equipment_type="AERATOR",
+                            equipment_code=a.aerator_code,
+                            action="START",
+                            params={"reason": "Break surface stratification during heavy rain", "rainfall_mm": rainfall_mm},
+                            decision_event_id=event_id
+                        )
+                    is_exec = True
+
+                event = AutonomousDecisionEvent(
+                    event_id=event_id,
+                    pond_id=pond_id,
+                    severity="WARNING",
+                    condition_type="HEAVY_RAIN_FLOOD",
+                    title=f"Heavy Rain & Dilution Safeguard — Pond 0{pond_id}",
+                    trigger_parameters={"rainfall_mm": rainfall_mm, "water_level_m": water_level_m, "salinity_ppt": sal_val},
+                    multi_parameter_analysis={"stratification_risk": "HIGH"},
+                    weather_context={"rainfall_mm": rainfall_mm},
+                    decision_rationale=rationale,
+                    selected_action="STRATIFICATION_DESTRATIFY_AERATION_AND_SURFACE_SKIM",
+                    action_mode=action_mode,
+                    is_executed=is_exec,
+                    status="ACTION_EXECUTED" if is_exec else "DETECTED",
+                    created_at=now_dt
+                )
+                db.add(event)
+                db.commit()
+
+                notification_service.send_notification(
+                    db=db,
+                    pond_id=pond_id,
+                    condition_detected="HEAVY_RAIN_FLOOD",
+                    severity="WARNING",
+                    title=f"Heavy Rain Osmotic Shock Safeguard — Pond 0{pond_id}",
+                    message=rationale,
+                    actual_reading=rainfall_mm,
+                    unit="mm",
+                    configured_threshold=25.0,
+                    automatic_action_taken="STRATIFICATION_AERATION" if is_exec else "ADVISORY_PENDING",
+                    action_status="EXECUTED" if is_exec else "MANUAL_AUTH_REQUIRED",
+                    recommended_next_steps="Apply agricultural limestone/dolomite (CaMg(CO3)2) to buffer total alkalinity.",
+                    event_id=event_id
+                )
+                generated_events.append(event)
 
         # =========================================================================
         # CONDITION D: CHEMICAL / MEDICATION DOSING HARD LOCK ENFORCEMENT
         # =========================================================================
         # If an algorithm or user triggers chemical dosing, enforce hard safety block:
         if simulated_override and simulated_override.get("request_chemical_dosing"):
-            event_id = f"EVT-CHEM-BLOCK-{uuid.uuid4().hex[:8].upper()}"
-            rationale = (
-                "HARD SAFETY RULE VIOLATION: Autonomous chemical, therapeutic, or biological dosing is strictly "
-                "prohibited by Section 5 of the Master Governance Specification. Automated dosing without certified "
-                "laboratory confirmation and manual veterinary sign-off is blocked."
-            )
-            event = AutonomousDecisionEvent(
-                event_id=event_id,
-                pond_id=pond_id,
-                severity="ADVISORY",
-                condition_type="CHEMICAL_DOSING_BLOCKED",
-                title=f"Chemical Dosing Blocked by Safety Lock — Pond 0{pond_id}",
-                trigger_parameters={"requested_dosing": simulated_override.get("request_chemical_dosing")},
-                multi_parameter_analysis={"safety_lock": "HARD_ENFORCED"},
-                weather_context={},
-                decision_rationale=rationale,
-                selected_action="BLOCK_AUTONOMOUS_CHEMICAL_DOSING",
-                action_mode="BLOCKED_BY_SAFETY",
-                is_executed=False,
-                status="ACTION_EXECUTED",
-                created_at=now_dt
-            )
-            db.add(event)
-            db.commit()
+            recent_chem_ev = db.query(AutonomousDecisionEvent).filter(
+                AutonomousDecisionEvent.pond_id == pond_id,
+                AutonomousDecisionEvent.condition_type == "CHEMICAL_DOSING_BLOCKED",
+                AutonomousDecisionEvent.created_at >= now_dt - timedelta(minutes=5)
+            ).order_by(AutonomousDecisionEvent.created_at.desc()).first()
 
-            notification_service.send_notification(
-                db=db,
-                pond_id=pond_id,
-                condition_detected="CHEMICAL_DOSING_BLOCKED",
-                severity="ADVISORY",
-                title=f"Chemical Dosing Blocked — Pond 0{pond_id}",
-                message=rationale,
-                automatic_action_taken="BLOCK_AUTONOMOUS_CHEMICAL_DOSING",
-                action_status="BLOCKED_BY_SAFETY",
-                recommended_next_steps="Consult certified aquatic animal health specialist for manual prescription dosing.",
-                event_id=event_id
-            )
-            generated_events.append(event)
+            if recent_chem_ev:
+                recent_chem_ev.trigger_parameters = {"requested_dosing": simulated_override.get("request_chemical_dosing")}
+                db.commit()
+                generated_events.append(recent_chem_ev)
+            else:
+                event_id = f"EVT-CHEM-BLOCK-{uuid.uuid4().hex[:8].upper()}"
+                rationale = (
+                    "HARD SAFETY RULE VIOLATION: Autonomous chemical, therapeutic, or biological dosing is strictly "
+                    "prohibited by Section 5 of the Master Governance Specification. Automated dosing without certified "
+                    "laboratory confirmation and manual veterinary sign-off is blocked."
+                )
+                event = AutonomousDecisionEvent(
+                    event_id=event_id,
+                    pond_id=pond_id,
+                    severity="ADVISORY",
+                    condition_type="CHEMICAL_DOSING_BLOCKED",
+                    title=f"Chemical Dosing Blocked by Safety Lock — Pond 0{pond_id}",
+                    trigger_parameters={"requested_dosing": simulated_override.get("request_chemical_dosing")},
+                    multi_parameter_analysis={"safety_lock": "HARD_ENFORCED"},
+                    weather_context={},
+                    decision_rationale=rationale,
+                    selected_action="BLOCK_AUTONOMOUS_CHEMICAL_DOSING",
+                    action_mode="BLOCKED_BY_SAFETY",
+                    is_executed=False,
+                    status="ACTION_EXECUTED",
+                    created_at=now_dt
+                )
+                db.add(event)
+                db.commit()
+
+                notification_service.send_notification(
+                    db=db,
+                    pond_id=pond_id,
+                    condition_detected="CHEMICAL_DOSING_BLOCKED",
+                    severity="ADVISORY",
+                    title=f"Chemical Dosing Blocked — Pond 0{pond_id}",
+                    message=rationale,
+                    automatic_action_taken="BLOCK_AUTONOMOUS_CHEMICAL_DOSING",
+                    action_status="BLOCKED_BY_SAFETY",
+                    recommended_next_steps="Consult certified aquatic animal health specialist for manual prescription dosing.",
+                    event_id=event_id
+                )
+                generated_events.append(event)
 
         return generated_events
 

@@ -341,10 +341,45 @@ def issue_device_command(
     now = datetime.now(timezone.utc)
     expires_at = now + timedelta(seconds=cmd.expires_in_seconds or 300)
 
-    # Check for duplicate command_id
+    # Check for duplicate command_id (idempotency & conflict protection)
     existing = db.query(DeviceCommand).filter(DeviceCommand.command_id == cmd_id).first()
     if existing:
-        return existing
+        if existing.device_id != device_id or existing.action != cmd.action:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Command ID conflict: '{cmd_id}' is already registered for device '{existing.device_id}' with action '{existing.action}' and cannot be reused for a different device or action."
+            )
+        return {
+            "status": existing.status if existing.status != "PENDING" else "QUEUED",
+            "command_id": existing.command_id,
+            "device_id": existing.device_id,
+            "action": existing.action,
+            "issued_at": existing.issued_at.isoformat() if existing.issued_at else None,
+            "expires_at": existing.expires_at.isoformat() if existing.expires_at else None,
+            "delivery_state": "EXISTING_IDEMPOTENT_RECORD"
+        }
+
+    # In-flight duplicate command suppression for same device and action (when no explicit command_id provided)
+    if not cmd.command_id:
+        active_in_flight = db.query(DeviceCommand).filter(
+            DeviceCommand.device_id == device_id,
+            DeviceCommand.action == cmd.action,
+            DeviceCommand.status.in_(["PENDING", "QUEUED", "SENT", "ACKNOWLEDGED"])
+        ).order_by(DeviceCommand.issued_at.desc()).first()
+
+        if active_in_flight and active_in_flight.expires_at:
+            in_flight_exp = active_in_flight.expires_at.replace(tzinfo=timezone.utc) if active_in_flight.expires_at.tzinfo is None else active_in_flight.expires_at
+            if in_flight_exp > now:
+                return {
+                    "status": "QUEUED",
+                    "command_id": active_in_flight.command_id,
+                    "device_id": active_in_flight.device_id,
+                    "action": active_in_flight.action,
+                    "issued_at": active_in_flight.issued_at.isoformat() if active_in_flight.issued_at else None,
+                    "expires_at": in_flight_exp.isoformat(),
+                    "delivery_state": "IN_FLIGHT_DEDUPLICATED",
+                    "message": f"Identical command '{cmd.action}' already active in-flight for device '{device_id}'"
+                }
 
     record = DeviceCommand(
         command_id=cmd_id,
@@ -383,8 +418,9 @@ def issue_device_command(
 @router.post("/{device_id}/ack")
 def acknowledge_device_command(device_id: str, ack: ActuatorCommandAckRequest, db: Session = Depends(get_db)):
     """
-    Processes command acknowledgement from edge device or gateway simulator.
-    Transitions state machine: PENDING -> ACKNOWLEDGED / COMPLETED / FAILED.
+    Processes command acknowledgement from edge device or gateway controller.
+    Enforces state machine: PENDING / QUEUED / SENT -> ACKNOWLEDGED -> EXECUTED (or COMPLETED) / FAILED / EXPIRED.
+    Distinguishes controller ACK (received) from verified actuator EXECUTED (state changed).
     """
     cmd = db.query(DeviceCommand).filter(
         DeviceCommand.command_id == ack.command_id,
@@ -394,18 +430,59 @@ def acknowledge_device_command(device_id: str, ack: ActuatorCommandAckRequest, d
     if not cmd:
         raise HTTPException(status_code=404, detail=f"Command '{ack.command_id}' not found for device '{device_id}'")
 
+    # 1. Lockout Terminal States: terminal commands cannot transition
+    terminal_states = ["FAILED", "EXPIRED", "CANCELLED", "REJECTED_LOCAL_SAFETY_HOLD"]
+    if cmd.status in terminal_states:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot transition terminal command '{cmd.command_id}' in state '{cmd.status}'"
+        )
+
     now = datetime.now(timezone.utc)
-    # Check expiry
-    if cmd.expires_at and now > cmd.expires_at.replace(tzinfo=timezone.utc):
+
+    # 2. Duplicate Execution Prevention & Idempotent Repeat ACK
+    if cmd.status in ["EXECUTED", "COMPLETED"]:
+        if ack.status in ["EXECUTED", "COMPLETED", "ACKNOWLEDGED"]:
+            return {
+                "status": "SUCCESS",
+                "command_id": cmd.command_id,
+                "current_status": cmd.status,
+                "acknowledged_at": cmd.acknowledged_at.isoformat() if cmd.acknowledged_at else now.isoformat(),
+                "completed_at": cmd.completed_at.isoformat() if cmd.completed_at else None,
+                "message": "Duplicate acknowledgment processed idempotently; command already completed."
+            }
+        raise HTTPException(
+            status_code=400,
+            detail=f"Command '{cmd.command_id}' has already been EXECUTED and cannot transition to '{ack.status}'"
+        )
+
+    # 3. Check expiry
+    cmd_exp = cmd.expires_at.replace(tzinfo=timezone.utc) if cmd.expires_at and cmd.expires_at.tzinfo is None else cmd.expires_at
+    if cmd_exp and now > cmd_exp:
         cmd.status = "EXPIRED"
         cmd.error_message = "Command expired before device execution"
         db.commit()
         return {"status": "EXPIRED", "command_id": cmd.command_id, "message": "Command has expired"}
 
-    cmd.status = ack.status
-    cmd.acknowledged_at = now
-    if ack.status == "COMPLETED":
-        cmd.completed_at = now
+    # 4. Enforce Physical Actuator Feedback for EXECUTED state
+    if ack.status in ["EXECUTED", "COMPLETED"]:
+        if not ack.actual_state:
+            # Controller confirmed receipt/dispatch, but physical actuator hardware feedback is unverified
+            cmd.status = "ACKNOWLEDGED"
+            cmd.acknowledged_at = cmd.acknowledged_at or now
+            cmd.error_message = "Physical execution unverified: Actuator hardware state feedback was not reported"
+        else:
+            # Actual actuator physical state verified
+            cmd.status = ack.status
+            cmd.completed_at = now
+            cmd.acknowledged_at = cmd.acknowledged_at or now
+            cmd.error_message = None
+    elif ack.status == "ACKNOWLEDGED":
+        cmd.status = "ACKNOWLEDGED"
+        cmd.acknowledged_at = now
+    else:
+        cmd.status = ack.status
+
     if ack.error_message:
         cmd.error_message = ack.error_message
 
@@ -413,7 +490,7 @@ def acknowledge_device_command(device_id: str, ack: ActuatorCommandAckRequest, d
         action="DEVICE_COMMAND_ACKNOWLEDGED",
         resource_type="DEVICE",
         resource_id=device_id,
-        details={"command_id": cmd.command_id, "status": ack.status, "actual_state": ack.actual_state}
+        details={"command_id": cmd.command_id, "status": cmd.status, "actual_state": ack.actual_state}
     ))
     db.commit()
 
@@ -421,7 +498,8 @@ def acknowledge_device_command(device_id: str, ack: ActuatorCommandAckRequest, d
         "status": "SUCCESS",
         "command_id": cmd.command_id,
         "current_status": cmd.status,
-        "acknowledged_at": now.isoformat()
+        "acknowledged_at": cmd.acknowledged_at.isoformat() if cmd.acknowledged_at else now.isoformat(),
+        "completed_at": cmd.completed_at.isoformat() if cmd.completed_at else None
     }
 
 @router.get("/{device_id}/commands")
@@ -432,11 +510,16 @@ def get_device_commands(device_id: str, limit: int = Query(20, le=100), db: Sess
 
     now = datetime.now(timezone.utc)
     result = []
+    has_mutated = False
     for c in commands:
         status_val = c.status
-        # Dynamic check if expired
-        if status_val == "PENDING" and c.expires_at and now > c.expires_at.replace(tzinfo=timezone.utc):
+        # Dynamic check and DB PERSISTENCE if expired
+        c_exp = c.expires_at.replace(tzinfo=timezone.utc) if c.expires_at and c.expires_at.tzinfo is None else c.expires_at
+        if status_val in ["PENDING", "QUEUED", "SENT"] and c_exp and now > c_exp:
             status_val = "EXPIRED"
+            c.status = "EXPIRED"
+            c.error_message = "Command expired before edge execution"
+            has_mutated = True
 
         result.append({
             "command_id": c.command_id,
@@ -448,6 +531,10 @@ def get_device_commands(device_id: str, limit: int = Query(20, le=100), db: Sess
             "issued_at": c.issued_at.isoformat() if c.issued_at else None,
             "expires_at": c.expires_at.isoformat() if c.expires_at else None,
             "acknowledged_at": c.acknowledged_at.isoformat() if c.acknowledged_at else None,
+            "completed_at": c.completed_at.isoformat() if c.completed_at else None,
             "error_message": c.error_message
         })
+
+    if has_mutated:
+        db.commit()
     return result

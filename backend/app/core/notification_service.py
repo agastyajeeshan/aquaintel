@@ -11,7 +11,7 @@ import hashlib
 import logging
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, Any, Optional, List
 import httpx
 from sqlalchemy.orm import Session
@@ -26,8 +26,8 @@ class NotificationService:
         self.dedup_window_seconds = dedup_window_seconds
         self._recent_hashes: Dict[str, float] = {}  # hash -> timestamp
 
-    def _generate_dedup_hash(self, pond_id: int, condition_type: str, severity: str) -> str:
-        raw = f"{pond_id}:{condition_type}:{severity}"
+    def _generate_dedup_hash(self, pond_id: Optional[int], condition_type: str, severity: str, device_id: Optional[str] = None) -> str:
+        raw = f"{pond_id if pond_id is not None else 'NONE'}:{device_id or 'NONE'}:{condition_type}:{severity}"
         return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
     def dispatch_push_to_devices(
@@ -163,10 +163,32 @@ class NotificationService:
             "dispatched_at": datetime.now(timezone.utc).isoformat()
         }
 
+    def clear_dedup_hash(self, pond_id: Optional[int] = None, condition_detected: Optional[str] = None, device_id: Optional[str] = None):
+        """
+        Clears in-memory deduplication cache when a condition is resolved/restored,
+        allowing subsequent genuine new occurrences to notify immediately.
+        """
+        p_str = str(pond_id) if pond_id is not None else "NONE"
+        d_str = str(device_id) if device_id is not None else "NONE"
+        if condition_detected:
+            for k in list(self._recent_hashes.keys()):
+                parts = k.split(":")
+                if len(parts) >= 3:
+                    if pond_id is not None and parts[0] != p_str:
+                        continue
+                    if device_id is not None and parts[1] != d_str:
+                        continue
+                    if parts[2] == condition_detected or condition_detected in parts[2]:
+                        self._recent_hashes.pop(k, None)
+                elif condition_detected in k:
+                    self._recent_hashes.pop(k, None)
+        else:
+            self._recent_hashes.clear()
+
     def send_notification(
         self,
         db: Session,
-        pond_id: int,
+        pond_id: Optional[int],
         condition_detected: str,
         severity: str,  # INFO, ADVISORY, WARNING, CRITICAL, EMERGENCY
         title: str,
@@ -178,24 +200,71 @@ class NotificationService:
         action_status: str = "NOT_APPLICABLE",
         recommended_next_steps: str = "Continue nominal monitoring",
         event_id: Optional[str] = None,
-        force_escalate: bool = False
+        force_escalate: bool = False,
+        device_id: Optional[str] = None
     ) -> Optional[NotificationLog]:
         """
         Formats, deduplicates, and dispatches an autonomous notification across configured channels,
         including live Expo push notification to Android devices.
+        Enforces deduplication window even during ongoing outages or high severity conditions
+        to prevent duplicate spam. Escalations across severity levels (e.g. WARNING -> EMERGENCY)
+        generate new unique hashes and are delivered immediately.
+        Durable across process restarts and multi-worker processes via database alert & event identity.
         """
         now_ts = time.time()
-        dedup_hash = self._generate_dedup_hash(pond_id, condition_detected, severity)
-        
-        # Check deduplication window unless emergency or forced escalation
-        if not force_escalate and severity not in ["CRITICAL", "EMERGENCY"]:
-            last_sent = self._recent_hashes.get(dedup_hash, 0)
-            if (now_ts - last_sent) < self.dedup_window_seconds:
-                # Suppress duplicate non-critical alerts
-                return None
-                
-        self._recent_hashes[dedup_hash] = now_ts
         now_dt = datetime.now(timezone.utc)
+        dedup_key = f"{pond_id if pond_id is not None else 'NONE'}:{device_id or 'NONE'}:{condition_detected}:{severity}"
+        dedup_hash = self._generate_dedup_hash(pond_id, condition_detected, severity, device_id=device_id)
+        
+        # 1. Check in-memory deduplication window
+        last_sent = self._recent_hashes.get(dedup_key, 0)
+        if (now_ts - last_sent) < self.dedup_window_seconds and not force_escalate:
+            # Suppress duplicate alert within dedup window
+            return None
+
+        # 2. Durable deduplication check against database (across process restarts & multi-workers):
+        # A. Explicit event_id deduplication: if this event_id has already been notified within dedup window, suppress
+        if event_id:
+            window_start = now_dt - timedelta(seconds=self.dedup_window_seconds)
+            existing_event_notif = db.query(NotificationLog).filter(
+                NotificationLog.event_id == event_id,
+                NotificationLog.timestamp >= window_start
+            ).first()
+            if existing_event_notif:
+                return None
+
+        # B. Check active Alert in database:
+        # If an alert for this entity and condition is already ACTIVE and was already notified,
+        # suppress duplicate notifications across restarts
+        if not force_escalate:
+            from ..models.models import Alert
+            alert_q = db.query(Alert).filter(Alert.status == "ACTIVE")
+            if pond_id is not None:
+                alert_q = alert_q.filter(Alert.pond_id == pond_id)
+            else:
+                alert_q = alert_q.filter(Alert.pond_id.is_(None))
+            if device_id is not None:
+                alert_q = alert_q.filter(Alert.device_id == device_id)
+            else:
+                alert_q = alert_q.filter(Alert.device_id.is_(None))
+
+            matching_alert = alert_q.filter(
+                (Alert.alert_type == condition_detected) |
+                (Alert.alert_type.contains(condition_detected)) |
+                (Alert.title.contains(condition_detected))
+            ).first()
+
+            if matching_alert:
+                existing_alert_log = db.query(NotificationLog).filter(
+                    NotificationLog.dedup_hash == dedup_hash,
+                    NotificationLog.timestamp >= matching_alert.created_at
+                ).first()
+                if existing_alert_log:
+                    ts = existing_alert_log.timestamp.replace(tzinfo=timezone.utc).timestamp() if existing_alert_log.timestamp.tzinfo is None else existing_alert_log.timestamp.timestamp()
+                    self._recent_hashes[dedup_key] = ts
+                    return None
+                
+        self._recent_hashes[dedup_key] = now_ts
         
         # Determine escalation tier and active dispatch channels
         channels = ["IN_APP", "DASHBOARD"]
@@ -211,6 +280,7 @@ class NotificationService:
         # Standardized Payload Specification
         structured_payload = {
             "pond_id": pond_id,
+            "device_id": device_id,
             "condition_detected": condition_detected,
             "actual_reading": actual_reading,
             "unit": unit,

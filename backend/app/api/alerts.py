@@ -13,40 +13,59 @@ ALERT_COOLDOWN_MINUTES = 15
 
 def create_or_deduplicate_alert(
     db: Session,
-    pond_id: int,
+    pond_id: Optional[int],
     alert_type: str,
     severity: str,
     title: str,
     description: str,
     cause: Optional[str] = None,
-    recommended_action: Optional[str] = None
+    recommended_action: Optional[str] = None,
+    device_id: Optional[str] = None
 ) -> Alert:
     """
-    Enforces deduplication, hysteresis, and cooldowns.
-    Avoids repeatedly generating duplicate alerts for the same condition.
+    Enforces deduplication, hysteresis, and idempotency.
+    Guarantees exactly ONE active alert per unique event identity:
+    - Pond-specific events (pond_id set, device_id optional)
+    - Gateway-specific events (pond_id None, device_id="GW-01")
+    - Device-specific events (device_id="ESP32-P01", etc.)
+    - Facility-wide events (pond_id None, device_id None or "FACILITY")
+    Two different gateways generate independent outage alerts even with identical types.
+    Repeated detections update and retain the existing active alert without creating duplicates.
+    Once resolved, genuine new occurrences create a new alert.
+    Distinct events with different alert_type, device_id, or pond_id are never suppressed.
     """
     now = datetime.now(timezone.utc)
-    cooldown_threshold = now - timedelta(minutes=ALERT_COOLDOWN_MINUTES)
+    pond_filter = Alert.pond_id.is_(None) if pond_id is None else Alert.pond_id == pond_id
+    device_filter = Alert.device_id.is_(None) if device_id is None else Alert.device_id == device_id
 
-    # Check for existing active or recently acknowledged alert of same type for pond
+    # Check for existing active or acknowledged alert of same type and entity identity
     existing = db.query(Alert).filter(
-        Alert.pond_id == pond_id,
+        pond_filter,
+        device_filter,
         Alert.alert_type == alert_type,
         Alert.status.in_(["ACTIVE", "ACKNOWLEDGED"])
     ).order_by(Alert.created_at.desc()).first()
 
     if existing:
-        # Check if within cooldown window
-        existing_ts = existing.created_at.replace(tzinfo=timezone.utc) if existing.created_at.tzinfo is None else existing.created_at
-        if existing_ts > cooldown_threshold:
-            # Update description and keep single active alert
-            existing.description = description
-            db.commit()
-            return existing
+        # Ongoing active alert: update details and return existing to prevent duplicate spam
+        existing.description = description
+        if cause:
+            existing.cause = cause
+        if recommended_action:
+            existing.recommended_action = recommended_action
+        # Upgrade severity if escalated (e.g. WARNING -> CRITICAL)
+        severity_rank = {"INFO": 1, "WARNING": 2, "HIGH": 3, "CRITICAL": 4, "EMERGENCY": 5}
+        if severity_rank.get(severity, 0) > severity_rank.get(existing.severity, 0):
+            existing.severity = severity
+            existing.title = title
+        db.commit()
+        db.refresh(existing)
+        return existing
 
     # Create new deduplicated alert
     new_alert = Alert(
         pond_id=pond_id,
+        device_id=device_id,
         alert_type=alert_type,
         severity=severity,
         title=title,
@@ -60,8 +79,8 @@ def create_or_deduplicate_alert(
     db.add(AuditLog(
         action="ALERT_TRIGGERED",
         resource_type="ALERT",
-        resource_id=f"P{pond_id}-{alert_type}",
-        details={"severity": severity, "title": title}
+        resource_id=f"{device_id or ('P' + str(pond_id) if pond_id else 'FACILITY')}-{alert_type}",
+        details={"severity": severity, "title": title, "device_id": device_id, "pond_id": pond_id}
     ))
     db.commit()
     db.refresh(new_alert)
@@ -83,11 +102,51 @@ def create_or_deduplicate_alert(
 
     return new_alert
 
+def resolve_alert_by_type(
+    db: Session,
+    pond_id: Optional[int],
+    alert_type: str,
+    device_id: Optional[str] = None,
+    resolved_by: str = "SYSTEM"
+) -> Optional[Alert]:
+    """
+    Resolves ongoing active alerts matching pond_id, device_id, and alert_type when condition clears.
+    Allows subsequent genuine new occurrences to create a fresh alert.
+    """
+    pond_filter = Alert.pond_id.is_(None) if pond_id is None else Alert.pond_id == pond_id
+    device_filter = Alert.device_id.is_(None) if device_id is None else Alert.device_id == device_id
+    active_alerts = db.query(Alert).filter(
+        pond_filter,
+        device_filter,
+        Alert.alert_type == alert_type,
+        Alert.status.in_(["ACTIVE", "ACKNOWLEDGED"])
+    ).all()
+
+    now = datetime.now(timezone.utc)
+    resolved_alert = None
+    for a in active_alerts:
+        a.status = "RESOLVED"
+        a.resolved_by = resolved_by
+        a.resolved_at = now
+        resolved_alert = a
+        db.add(AuditLog(
+            action="ALERT_RESOLVED",
+            resource_type="ALERT",
+            resource_id=str(a.id),
+            details={"resolved_by": resolved_by, "alert_type": alert_type, "pond_id": pond_id, "device_id": device_id}
+        ))
+    if active_alerts:
+        db.commit()
+        if resolved_alert:
+            db.refresh(resolved_alert)
+    return resolved_alert
+
 @router.get("")
 def get_alerts(
     status: Optional[str] = None,
     severity: Optional[str] = None,
     pond_id: Optional[int] = None,
+    device_id: Optional[str] = None,
     limit: int = Query(50, le=200),
     db: Session = Depends(get_db)
 ):
@@ -98,11 +157,14 @@ def get_alerts(
         query = query.filter(Alert.severity == severity)
     if pond_id:
         query = query.filter(Alert.pond_id == pond_id)
+    if device_id:
+        query = query.filter(Alert.device_id == device_id)
         
     alerts = query.order_by(Alert.created_at.desc()).limit(limit).all()
     return [{
         "id": a.id,
         "pond_id": a.pond_id,
+        "device_id": a.device_id,
         "alert_type": a.alert_type,
         "severity": a.severity,
         "title": a.title,
