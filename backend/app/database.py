@@ -40,6 +40,15 @@ def ensure_schema_migrations():
                 if "is_provisioned" not in dev_cols:
                     conn.execute(text("ALTER TABLE iot_devices ADD COLUMN is_provisioned BOOLEAN DEFAULT 1"))
 
+            # Check alerts table columns for multi-entity / gateway alert identity
+            alerts_exists = conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='alerts'")
+            ).fetchone()
+            if alerts_exists:
+                alert_cols = [row[1] for row in conn.execute(text("PRAGMA table_info(alerts)")).fetchall()]
+                if "device_id" not in alert_cols:
+                    conn.execute(text("ALTER TABLE alerts ADD COLUMN device_id VARCHAR(64)"))
+
             # Clean up orphaned feeders pointing to deleted/non-existent ponds and enforce unique feeder_code
             feeders_exists = conn.execute(
                 text("SELECT name FROM sqlite_master WHERE type='table' AND name='feeders'")

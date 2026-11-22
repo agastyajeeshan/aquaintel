@@ -198,6 +198,7 @@ class Alert(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     pond_id = Column(Integer, ForeignKey("ponds.id"), nullable=True)
+    device_id = Column(String(64), nullable=True, index=True)
     alert_type = Column(String(50), nullable=False)  # LOW_DO, HIGH_AMMONIA, PH_DEV, TEMP_SPIKE, SENSOR_FAULT, DISEASE_RISK
     severity = Column(String(20), nullable=False)  # INFO, WARNING, HIGH, CRITICAL
     title = Column(String(150), nullable=False)

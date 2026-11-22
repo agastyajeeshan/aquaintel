@@ -16,7 +16,8 @@ from sqlalchemy.orm import Session
 from ..models import (
     FarmGateway, EdgeSyncBatch, RemoteCommandRecord, EdgeTelemetryBuffer,
     Pond, Sensor, SensorReading, Aerator, Feeder,
-    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord
+    AutomationSafetyConfig, AutonomousDecisionEvent, AutonomousActionRecord,
+    AuditLog
 )
 from .hal import hal
 from .autonomous_engine import autonomous_engine, sanitize_for_json
@@ -41,7 +42,7 @@ class EdgeGatewayService:
     def is_connected(self) -> bool:
         return self._is_connected
 
-    def set_connectivity(self, connected: bool, db: Optional[Session] = None) -> Dict[str, Any]:
+    def set_connectivity(self, connected: bool, db: Optional[Session] = None, gateway_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Toggles edge gateway internet uplink connectivity state.
         Dispatches farmer notifications for disconnect and reconnect events.
@@ -50,9 +51,10 @@ class EdgeGatewayService:
         self._is_connected = connected
         hal.set_cloud_connected(connected)
         now_dt = datetime.now(timezone.utc)
+        gid = gateway_id or self._gateway_id
 
         if db:
-            gw = db.query(FarmGateway).filter(FarmGateway.gateway_id == self._gateway_id).first()
+            gw = db.query(FarmGateway).filter(FarmGateway.gateway_id == gid).first()
             if gw:
                 gw.status = "ONLINE" if connected else "OFFLINE"
                 if connected:
@@ -64,31 +66,65 @@ class EdgeGatewayService:
             # Dispatch notification
             if prev_state and not connected:
                 # Connection Lost
+                try:
+                    from ..api.alerts import create_or_deduplicate_alert
+                    create_or_deduplicate_alert(
+                        db=db,
+                        pond_id=None,
+                        device_id=gid,
+                        alert_type="GATEWAY_OFFLINE",
+                        severity="WARNING",
+                        title=f"Edge Gateway Internet Outage — {gid}",
+                        description="Internet connectivity lost. Local edge RTU controllers have assumed 100% autonomous operation. Sensors buffering locally; emergency aeration protection active.",
+                        cause=f"Gateway uplink connection lost for {gid}",
+                        recommended_action="Pond safety is guaranteed by edge controller. Verify farm SIM/fiber uplink if outage persists."
+                    )
+                except Exception:
+                    pass
+
                 notification_service.send_notification(
                     db=db,
                     pond_id=None,
+                    device_id=gid,
                     condition_detected="INTERNET_DISCONNECTED",
                     severity="WARNING",
-                    title="Edge Gateway Internet Outage — Nellore Delta Facility",
+                    title=f"Edge Gateway Internet Outage — {gid}",
                     message="Internet connectivity lost. Local edge RTU controllers have assumed 100% autonomous operation. Sensors buffering locally; emergency aeration protection active.",
                     automatic_action_taken="ACTIVATE_OFFLINE_EDGE_SAFEGUARDS",
                     action_status="LOCAL_EDGE_ACTIVE",
-                    recommended_next_steps="Pond safety is guaranteed by edge controller. Verify farm SIM/fiber uplink if outage persists.",
-                    force_escalate=True
+                    recommended_next_steps="Pond safety is guaranteed by edge controller. Verify farm SIM/fiber uplink if outage persists."
                 )
             elif not prev_state and connected:
                 # Connection Restored
+                try:
+                    from ..api.alerts import resolve_alert_by_type
+                    resolve_alert_by_type(
+                        db=db,
+                        pond_id=None,
+                        device_id=gid,
+                        alert_type="GATEWAY_OFFLINE",
+                        resolved_by="SYSTEM_RECONNECT"
+                    )
+                except Exception:
+                    pass
+
+                notification_service.clear_dedup_hash(pond_id=None, condition_detected="INTERNET_DISCONNECTED", device_id=gid)
+
                 notification_service.send_notification(
                     db=db,
                     pond_id=None,
+                    device_id=gid,
                     condition_detected="INTERNET_RECONNECTED",
                     severity="INFO",
-                    title="Edge Gateway Cloud Uplink Restored — Nellore Delta",
+                    title=f"Edge Gateway Cloud Uplink Restored — {gid}",
                     message="Internet connection re-established with central cloud. Edge data spool flushing buffered records idempotently.",
                     automatic_action_taken="INITIATE_IDEMPOTENT_BUFFER_SYNC",
                     action_status="SYNC_IN_PROGRESS",
                     recommended_next_steps="Cloud dashboard telemetry updated to latest live state."
                 )
+
+                # Process and validate queued remote commands
+                self.process_queued_remote_commands(db)
 
         return {
             "gateway_id": self._gateway_id,
@@ -352,11 +388,93 @@ class EdgeGatewayService:
 
         return True, f"Remote command {action} successfully executed by edge gateway.", cmd_rec
 
+    def process_queued_remote_commands(self, db: Optional[Session] = None) -> List[Dict[str, Any]]:
+        """
+        Processes remote commands queued during an edge gateway disconnect outage.
+        Enforces strict safety checks:
+        1. Stale commands that exceeded TTL are marked EXPIRED and never executed.
+        2. Commands within valid TTL are evaluated against local edge safety supremacy
+           (e.g. emergency hypoxia forbids stopping aerators; toxic ammonia forbids feeding).
+        3. Safe, unexpired commands are dispatched to edge hardware and marked EXECUTED_ACK.
+        """
+        if not db or not self._is_connected:
+            return []
+
+        now_dt = datetime.now(timezone.utc)
+        queued_cmds = db.query(RemoteCommandRecord).filter(
+            RemoteCommandRecord.status == "QUEUED"
+        ).all()
+
+        results = []
+        for cmd_rec in queued_cmds:
+            # 1. TTL Expiration Check
+            cmd_expires_at = cmd_rec.expires_at.replace(tzinfo=timezone.utc) if cmd_rec.expires_at.tzinfo is None else cmd_rec.expires_at
+            if now_dt > cmd_expires_at:
+                cmd_rec.status = "EXPIRED"
+                cmd_rec.rejection_reason = "Command expired during offline gateway outage; discarded upon reconnect."
+                db.add(AuditLog(
+                    action="REMOTE_COMMAND_EXPIRED_ON_RECONNECT",
+                    resource_type="EQUIPMENT",
+                    resource_id=cmd_rec.device_id,
+                    details={"command_id": cmd_rec.command_id, "reason": cmd_rec.rejection_reason}
+                ))
+                results.append({"command_id": cmd_rec.command_id, "status": "EXPIRED", "reason": cmd_rec.rejection_reason})
+                continue
+
+            # 2. Local Safety Supremacy Gate
+            pond_sensors = db.query(Sensor).filter(Sensor.pond_id == cmd_rec.pond_id).all() if cmd_rec.pond_id else []
+            telemetry = {s.sensor_type: s.current_value for s in pond_sensors}
+            current_do = telemetry.get("do", 6.2)
+            current_temp = telemetry.get("temperature", 28.5)
+            current_tan = telemetry.get("tan") if telemetry.get("tan") is not None else telemetry.get("ammonia", 0.04)
+            current_ph = telemetry.get("ph", 7.9)
+            un_ionized_nh3 = autonomous_engine.calculate_unionized_ammonia(current_tan, current_temp, current_ph)
+
+            # Rule A: Critical Hypoxia - Cannot shut off aerators!
+            if current_do < 3.8 and cmd_rec.equipment_type in ["AERATOR", "BACKUP_AERATOR"] and cmd_rec.action in ["STOP", "STANDBY", "OFF"]:
+                reason = f"LOCAL EDGE SAFETY HOLD: Cannot shut off aerators post-reconnect. Pond 0{cmd_rec.pond_id} in hypoxia (DO {current_do} < 3.8 mg/L)."
+                cmd_rec.status = "REJECTED_LOCAL_SAFETY_HOLD"
+                cmd_rec.rejection_reason = reason
+                results.append({"command_id": cmd_rec.command_id, "status": "REJECTED_LOCAL_SAFETY_HOLD", "reason": reason})
+                continue
+
+            # Rule B: Toxic Ammonia - Cannot dispense feed!
+            if un_ionized_nh3 > 0.05 and cmd_rec.equipment_type == "FEEDER" and cmd_rec.action in ["START", "DISPENSE", "FEED"]:
+                reason = f"LOCAL EDGE SAFETY HOLD: Cannot dispense feed post-reconnect. Toxic ammonia {un_ionized_nh3} mg/L > 0.05 mg/L ceiling."
+                cmd_rec.status = "REJECTED_LOCAL_SAFETY_HOLD"
+                cmd_rec.rejection_reason = reason
+                results.append({"command_id": cmd_rec.command_id, "status": "REJECTED_LOCAL_SAFETY_HOLD", "reason": reason})
+                continue
+
+            # 3. Valid & Safe Command: Dispatch via HAL
+            cmd_rec.delivered_to_edge_at = now_dt
+            success, msg, act_rec = hal.dispatch_command(
+                db=db,
+                pond_id=cmd_rec.pond_id or 1,
+                equipment_type=cmd_rec.equipment_type,
+                equipment_code=cmd_rec.device_id,
+                action=cmd_rec.action,
+                params={"reason": f"Post-reconnect execution authorized by {cmd_rec.issued_by_user}", **(cmd_rec.parameters or {})}
+            )
+            if not success:
+                cmd_rec.status = "MOTOR_FAULT_TRIPPED" if (act_rec and act_rec.equipment_ack_status == "MOTOR_FAULT_TRIPPED") else "REJECTED_LOCAL_SAFETY_HOLD"
+                cmd_rec.rejection_reason = msg
+            else:
+                cmd_rec.status = "EXECUTED_ACK"
+                cmd_rec.executed_at = now_dt
+                cmd_rec.equipment_feedback = "RUNNING" if cmd_rec.action in ["START", "BOOST", "CASCADE_ALL"] else "STANDBY"
+            results.append({"command_id": cmd_rec.command_id, "status": cmd_rec.status, "reason": cmd_rec.rejection_reason})
+
+        db.commit()
+        return results
+
     def flush_and_sync_buffer(self, db: Session) -> Dict[str, Any]:
         """
         Idempotently flushes all buffered edge telemetry to the cloud database.
         Computes SHA-256 hash to prevent duplicate insertions upon connection flapping.
+        Also evaluates and processes any queued remote commands.
         """
+        self.process_queued_remote_commands(db)
         buffered_records = db.query(EdgeTelemetryBuffer).filter(EdgeTelemetryBuffer.is_synced == False).all()
         if not buffered_records:
             return {

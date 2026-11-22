@@ -32,6 +32,55 @@ export const AutonomousEngine: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [modeConfirmModal, setModeConfirmModal] = useState<string | null>(null);
 
+  const getActionStatusBadge = (status: string) => {
+    switch (status) {
+      case "EXECUTED":
+      case "COMPLETED":
+        return "bg-[#E3F3E9] text-[#174D39] border border-[#B2D8C6]";
+      case "ACKNOWLEDGED":
+        return "bg-[#E6F7F5] text-[#0E7066] border border-[#A5E3DC]";
+      case "SENT":
+        return "bg-[#EBF3FF] text-[#1D4ED8] border border-[#BFDBFE]";
+      case "QUEUED":
+      case "PENDING":
+        return "bg-[#FEF6E7] text-[#8F5B16] border border-[#FDE6B0]";
+      case "MOTOR_FAULT_TRIPPED":
+      case "FAILED":
+        return "bg-[#F9EBEB] text-[#A32D2D] border border-[#F2C2C2]";
+      case "EXPIRED":
+      case "CANCELLED":
+      case "REJECTED_LOCAL_SAFETY_HOLD":
+        return "bg-[#F0F4F1] text-[#68776F] border border-[#D1DCD6]";
+      default:
+        return "bg-[#E3F3E9] text-[#174D39]";
+    }
+  };
+
+  const formatRelativeTime = (isoString?: string) => {
+    if (!isoString) return "Just now";
+    try {
+      const d = new Date(isoString);
+      if (isNaN(d.getTime())) return "Recent";
+      const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+      if (diffSec < 10) return "Just now";
+      if (diffSec < 60) return `${diffSec}s ago`;
+      if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    } catch {
+      return "Recent";
+    }
+  };
+
+  const deduplicatedNotifications = React.useMemo(() => {
+    const seen = new Set<string>();
+    return notifications.filter((notif) => {
+      const key = `${notif.pond_id || "GLOBAL"}-${notif.structured_payload?.condition_detected || notif.title}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [notifications]);
+
   const fetchData = async () => {
     try {
       const [st, dec, act, notif, cfg] = await Promise.all([
@@ -621,11 +670,7 @@ export const AutonomousEngine: React.FC = () => {
                         </span>
                       </div>
                       <span
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          isTripped
-                            ? "bg-[#F9EBEB] text-[#A32D2D]"
-                            : "bg-[#E3F3E9] text-[#174D39]"
-                        }`}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getActionStatusBadge(act.equipment_ack_status)}`}
                       >
                         {act.equipment_ack_status}
                       </span>
@@ -633,11 +678,7 @@ export const AutonomousEngine: React.FC = () => {
 
                     <div className="flex items-center justify-between text-[11px] text-[#68776F] pt-1 border-t border-[#E3EAE5]/60">
                       <span>CMD: {act.command_id}</span>
-                      <span>
-                        {act.dispatched_at
-                          ? new Date(act.dispatched_at).toLocaleTimeString()
-                          : "Just now"}
-                      </span>
+                      <span>{formatRelativeTime(act.dispatched_at)}</span>
                     </div>
 
                     {act.notes && (
@@ -687,17 +728,17 @@ export const AutonomousEngine: React.FC = () => {
               </h3>
             </div>
             <span className="text-xs text-[#68776F]">
-              Recent {notifications.length}
+              Recent {deduplicatedNotifications.length}
             </span>
           </div>
 
           <div className="space-y-3 mt-3 overflow-y-auto max-h-[420px] pr-1">
-            {notifications.length === 0 ? (
+            {deduplicatedNotifications.length === 0 ? (
               <div className="text-center py-10 text-xs text-[#68776F]">
                 No autonomous alerts logged yet in this session.
               </div>
             ) : (
-              notifications.map((notif) => {
+              deduplicatedNotifications.map((notif) => {
                 const isCrit = notif.severity === "EMERGENCY" || notif.severity === "CRITICAL";
                 return (
                   <div
@@ -722,9 +763,7 @@ export const AutonomousEngine: React.FC = () => {
                         <span className="font-bold text-[#172820]">{notif.title}</span>
                       </div>
                       <span className="text-[10px] text-[#68776F]">
-                        {notif.timestamp
-                          ? new Date(notif.timestamp).toLocaleTimeString()
-                          : "Now"}
+                        {formatRelativeTime(notif.timestamp)}
                       </span>
                     </div>
 
@@ -737,13 +776,13 @@ export const AutonomousEngine: React.FC = () => {
                         <div className="flex justify-between">
                           <span className="text-[#68776F]">Action Taken:</span>
                           <span className="font-semibold text-[#172820]">
-                            {notif.structured_payload.automatic_action_taken}
+                            {notif.structured_payload?.automatic_action_taken ?? "--"}
                           </span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-[#68776F]">Recommended Next Steps:</span>
                           <span className="font-semibold text-[#1E6B4C]">
-                            {notif.structured_payload.recommended_next_steps}
+                            {notif.structured_payload?.recommended_next_steps ?? "--"}
                           </span>
                         </div>
                         <div className="flex justify-between text-[10px] text-[#68776F] pt-1 border-t border-[#E3EAE5]/40">
@@ -795,7 +834,7 @@ export const AutonomousEngine: React.FC = () => {
                   {dec.selected_action}
                 </span>
                 <span className="text-[10px] text-[#68776F]">
-                  {dec.created_at ? new Date(dec.created_at).toLocaleTimeString() : "Recent"}
+                  {formatRelativeTime(dec.created_at)}
                 </span>
               </div>
             </div>
